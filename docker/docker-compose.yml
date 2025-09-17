@@ -19,6 +19,19 @@ services:
     ports:
       - "6379:6379"
 
+  mongo:
+    image: mongo:7
+    container_name: ei-mongo
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
 volumes:
   mongo: {}
   esdata: {}
