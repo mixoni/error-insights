@@ -1,34 +1,64 @@
-import 'dotenv/config';
-import Fastify from 'fastify';
-import cors from '@fastify/cors';
-import { connectMongo } from './services/mongo.service';
+import express from 'express';
+import cors from 'cors';
+import pinoHttp from 'pino-http';
+import { ENV } from './config/env';
+import { logger } from './libs/logger';
+
+import { MongoClient } from 'mongodb';
+import Redis from 'ioredis';
+import { Client as EsClient } from '@elastic/elasticsearch';
+
+import { MongoEventWriter } from './adapters/mongo/MongoEventWriter';
+import { RedisCache } from './adapters/redis/RedisCache';
+import { ElasticEventReader } from './adapters/elastic-search/ElasticEventReader';
+
+import { makeSearchEvents } from './usecases/search-events';
+import { makeGetStats } from './usecases/get-stats';
+import { makeIngestEvents } from './usecases/ingest-events';
+
+import { eventsController } from './controllers/events.controller';
+import { eventsRoutes } from './routes/events.routes';
 import { ensureIndex } from './services/elastic-search.service';
-import { registerRoutes } from './routes';
-import { fileURLToPath, pathToFileURL } from 'url';
 
-export async function buildApp() {
-  const app = Fastify({ logger: true });
 
-  await app.register(cors, { origin: true });
+async function main() {
+  // clients
+  const mongo = new MongoClient(ENV.MONGO_URI);
+  await mongo.connect();
 
-  await connectMongo(process.env.MONGO_URI!);
-  await ensureIndex(process.env.ES_INDEX!);
+  const redis = new Redis(ENV.REDIS_URL);
+  const es = new EsClient({ node: ENV.ES_NODE });
 
-  app.get('/health', async () => ({ ok: true }));
+  // ensure ES index
+  await ensureIndex(es);
 
-  registerRoutes(app);
-  return app;
+  // adapters
+  const writer = new MongoEventWriter(mongo, ENV.MONGO_DB);
+  const cache = new RedisCache(redis);
+  const reader = new ElasticEventReader(es, ENV.ES_INDEX);
+
+  // usecases
+  const search = makeSearchEvents(reader, cache, ENV.CACHE_TTL_SEC);
+  const stats  = makeGetStats(reader, cache, ENV.CACHE_TTL_SEC);
+  const ingest = makeIngestEvents(writer, reader);
+
+  // http
+  const app = express();
+  app.use(cors());
+  app.use(express.json({ limit: '5mb' }));
+  app.use(pinoHttp({ logger }));
+
+  app.use('/', eventsRoutes(eventsController({ search, stats, ingest })));
+
+  app.use((err: any, _req: any, res: any, _next: any) => {
+    logger.error(err);
+    res.status(err?.status || 500).json({ error: err?.message || 'Internal error' });
+  });
+
+  app.listen(ENV.PORT, () => logger.info(`API on :${ENV.PORT}`));
 }
 
-const isMain = import.meta.url === pathToFileURL(process.argv[1] || '').href;
-
-if (isMain) {
-  buildApp()
-    .then(app =>
-      app.listen({ port: Number(process.env.PORT || 3000), host: '0.0.0.0' })
-    )
-    .catch(err => {
-      console.error('Failed to start server:', err);
-      process.exit(1);
-    });
-}
+main().catch(err => {
+  logger.error(err);
+  process.exit(1);
+});
