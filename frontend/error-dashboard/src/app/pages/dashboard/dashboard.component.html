@@ -1,0 +1,114 @@
+<div class="page">
+
+  <!-- Toolbar / Filters -->
+  <form class="toolbar" [formGroup]="form" (ngSubmit)="onSubmit()">
+    <div class="inputs">
+      <input placeholder="Start (ISO)" formControlName="start" />
+      <input placeholder="End (ISO)" formControlName="end" />
+      <input placeholder="userId" formControlName="userId" />
+      <input placeholder="browser" formControlName="browser" />
+      <input placeholder="url" formControlName="url" />
+      <input placeholder="keyword (error/stack)" formControlName="q" />
+    </div>
+    <div class="actions">
+      <button type="submit" class="btn primary">Search</button>
+      <button type="button" class="btn" (click)="reset()">Reset</button>
+    </div>
+  </form>
+
+  <!-- Meta row -->
+  <div class="meta">
+    <span class="dim">Total</span>
+    <strong>{{ total() }}</strong>
+
+    <span class="sep"></span>
+
+    <span class="dim">Cache</span>
+    <span class="badge" [class.badge--hit]="cacheFlag()==='hit'" [class.badge--miss]="cacheFlag()==='miss'">
+      {{ cacheFlag() || '—' }}
+    </span>
+  </div>
+
+  <!-- Content grid -->
+  <div class="grid">
+
+    <!-- Errors card -->
+    <section class="card">
+      <header class="card__header">
+        <h3 class="card__title">Errors</h3>
+      </header>
+
+      <div class="table-wrap">
+        <table class="tbl" *ngIf="events().length">
+          <thead>
+            <tr>
+              <th>timestamp</th>
+              <th>userId</th>
+              <th>browser</th>
+              <th>url</th>
+              <th>errorMessage</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let e of events()">
+              <td>{{ e.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</td>
+              <td>{{ e.userId }}</td>
+              <td>{{ e.browser }}</td>
+              <td class="mono">{{ e.url }}</td>
+              <td class="msg" title="{{ e.errorMessage }}">{{ e.errorMessage }}</td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <!-- <div class="pager" *ngIf="events().length">
+              <button type="button" class="btn sm" (click)="prevPage()" [disabled]="currentPage() <= 1">Prev</button>
+              <span class="dim">Page</span>
+              <strong>{{ currentPage() }}</strong>
+              <span class="dim">/ {{ maxPage() }}</span>
+              <span class="dim">· Size</span>
+              <select class="select sm" [formControl]="form.controls.size">
+                <option [value]="10">10</option>
+                <option [value]="25">25</option>
+                <option [value]="50">50</option>
+                <option [value]="100">100</option>
+              </select>
+              <button type="button" class="btn sm" (click)="nextPage()" [disabled]="currentPage() >= maxPage()">Next</button>
+            </div> -->
+          </tfoot>
+        </table>
+
+        <div *ngIf="loading()" class="chip chip--loading">Loading…</div>
+        <div *ngIf="!loading() && !events().length" class="chip">No data</div>
+      </div>
+    </section>
+
+    <!-- Charts card -->
+    <section class="card" *ngIf="stats() as s">
+      <header class="card__header">
+        <h3 class="card__title">Top Browsers</h3>
+      </header>
+
+      <div class="charts">
+        <div class="chart">
+          <div class="chart-box">
+            <canvas baseChart [type]="'pie'" [data]="browsersChartData()" [options]="pieOptions"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card" *ngIf="stats() as s">
+      <header class="card__header">
+        <h3 class="card__title">Error Messages</h3>
+      </header>
+
+      <div class="charts">
+        <div class="chart">
+          <div class="chart-box">
+            <canvas baseChart [type]="'bar'" [data]="errorMessagesChartData()" [options]="barOptions"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>

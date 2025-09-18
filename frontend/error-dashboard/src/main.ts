@@ -1,6 +1,16 @@
+import 'chart.js/auto';
 import { bootstrapApplication } from '@angular/platform-browser';
-import { appConfig } from './app/app.config';
-import { App } from './app/app';
+import { provideHttpClient } from '@angular/common/http';
+import { provideRouter, Routes } from '@angular/router';
+import { DashboardComponent } from './app/pages/dashboard/dashboard.component';
 
-bootstrapApplication(App, appConfig)
-  .catch((err) => console.error(err));
+const routes: Routes = [
+  { path: '', component: DashboardComponent },
+];
+
+bootstrapApplication(DashboardComponent, {
+  providers: [
+    provideHttpClient(),
+    provideRouter(routes),
+  ],
+}).catch(err => console.error(err));
