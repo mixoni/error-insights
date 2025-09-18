@@ -3,15 +3,15 @@
   <!-- Toolbar / Filters -->
   <form class="toolbar" [formGroup]="form" (ngSubmit)="onSubmit()">
     <div class="inputs">
-      <input placeholder="Start (ISO)" formControlName="start" />
-      <input placeholder="End (ISO)" formControlName="end" />
+      <input type="datetime-local" placeholder="Start" formControlName="start" [attr.max]="maxDateTime()" lang="sr-RS" />
+      <input type="datetime-local" placeholder="End"   formControlName="end"   [attr.max]="maxDateTime()" lang="sr-RS" />  
       <input placeholder="userId" formControlName="userId" />
       <input placeholder="browser" formControlName="browser" />
       <input placeholder="url" formControlName="url" />
-      <input placeholder="keyword (error/stack)" formControlName="q" />
+      <input placeholder="keyword (error/stack)" formControlName="q" /> 
     </div>
     <div class="actions">
-      <button type="submit" class="btn primary">Search</button>
+      <!-- <button type="submit" class="btn primary">Search</button> -->
       <button type="button" class="btn" (click)="reset()">Reset</button>
     </div>
   </form>

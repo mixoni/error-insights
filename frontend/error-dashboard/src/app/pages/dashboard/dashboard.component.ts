@@ -1,6 +1,6 @@
 import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, AbstractControl, ValidationErrors, ValidatorFn } from '@angular/forms';
 import { HttpClientModule } from '@angular/common/http';
 import { BaseChartDirective } from 'ng2-charts';
 import { toSignal, toObservable } from '@angular/core/rxjs-interop';
@@ -16,13 +16,35 @@ import { ApiService } from '../../services/api.service';
   styleUrls: ['./dashboard.component.scss'],
 })
 export class DashboardComponent {
-  // DI
   private fb = inject(FormBuilder);
   private api = inject(ApiService);
 
-  // Reactive form
+  // helper: format za <input type="datetime-local">
+  private toLocalInputValue(d: Date) {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+  // max vrednost (sada) za oba pickera
+  maxDateTime = signal(this.toLocalInputValue(new Date()));
+
+  // custom validator: start ≤ end, start ≤ now (i end ≤ now radi max atribut)
+  private dateRangeValidator(): ValidatorFn {
+    return (ctrl: AbstractControl): ValidationErrors | null => {
+      const startRaw = ctrl.get('start')?.value as string | null;
+      const endRaw   = ctrl.get('end')?.value as string | null;
+      const now = new Date();
+
+      const s = startRaw ? new Date(startRaw) : null;
+      const e = endRaw   ? new Date(endRaw)   : null;
+
+      if (s && s > now) return { startInFuture: true };
+      if (s && e && s > e) return { startAfterEnd: true };
+      return null;
+    };
+  }
+
   form = this.fb.group({
-    start: [''],
+    start: [''],          // 'YYYY-MM-DDTHH:mm'
     end: [''],
     userId: [''],
     browser: [''],
@@ -31,27 +53,32 @@ export class DashboardComponent {
     page: [1],
     size: [50],
     sort: ['desc'],
-  });
+  }, { validators: this.dateRangeValidator() });
 
-  // Auto-fetch (debounce) + koercija page/size u brojeve
+  private normalizeFilters = (v: any) => ({
+    ...v,
+    page: Number(v?.page ?? 1),
+    size: Number(v?.size ?? 50),
+    start: v?.start ? new Date(v.start as string).toISOString() : '',
+    end:   v?.end   ? new Date(v.end   as string).toISOString() : '',
+  });
+  
+  // Auto-fetch (debounce) + koercija + ISO konverzija
   private formValue$ = this.form.valueChanges.pipe(
-    startWith(this.form.getRawValue()),
-    map(v => ({
-      ...v,
-      page: Number(v?.page ?? 1),
-      size: Number(v?.size ?? 50),
-    })),
+    startWith(this.normalizeFilters(this.form.getRawValue())),
+    map(v => this.normalizeFilters(v)),
     debounceTime(300),
     distinctUntilChanged((a, b) => JSON.stringify(a) === JSON.stringify(b))
   );
+
   filters = toSignal(this.formValue$, { initialValue: { ...this.form.getRawValue(), page: 1, size: 50 } });
 
-  // Loading state: odvojeno za search i stats
+  // loading state
   searchLoading = signal(false);
   statsLoading  = signal(false);
   loading       = computed(() => this.searchLoading() || this.statsLoading());
 
-  // Search & Stats (sa finalize za gašenje loading-a)
+  // data pozivi
   search = toSignal(
     toObservable(this.filters).pipe(
       startWith(this.filters()),
@@ -76,33 +103,28 @@ export class DashboardComponent {
     { initialValue: null }
   );
 
-  // Derived
+  // izvedeno
   cacheFlag = computed(() => this.search()?.cache ?? null);
   events    = computed(() => this.search()?.items ?? []);
   total     = computed(() => Number(this.search()?.total ?? 0));
 
-  // Paging helpers
   currentPage = computed(() => Number(this.filters().page ?? 1));
   pageSize    = computed(() => Number(this.filters().size ?? 50));
   maxPage     = computed(() => Math.max(1, Math.ceil(this.total() / this.pageSize())));
 
-  // Charts data kao signals (stabilna referenca → bez rekreacije canvas-a)
-  browsersChartData       = signal<{ labels: string[]; datasets: any[] }>({ labels: [], datasets: [] });
-  errorMessagesChartData  = signal<{ labels: string[]; datasets: any[] }>({ labels: [], datasets: [] });
+  // charts
+  browsersChartData      = signal<{ labels: string[]; datasets: any[] }>({ labels: [], datasets: [] });
+  errorMessagesChartData = signal<{ labels: string[]; datasets: any[] }>({ labels: [], datasets: [] });
 
   constructor() {
-    // Ažuriraj chart podatke kad stignu stats
     toObservable(this.stats).subscribe(s => {
       if (!s) return;
-
       const topBrowsers = s.topBrowsers.slice(0, 5);
       const topErrors   = s.topErrorMessages.slice(0, 5);
-
       this.browsersChartData.set({
         labels: topBrowsers.map(b => b.key || 'unknown'),
         datasets: [{ data: topBrowsers.map(b => b.doc_count) }]
       });
-
       this.errorMessagesChartData.set({
         labels: topErrors.map(m => (m.key || 'unknown').slice(0, 40)),
         datasets: [{ data: topErrors.map(m => m.doc_count), label: 'Count' }]
@@ -110,38 +132,16 @@ export class DashboardComponent {
     });
   }
 
-  // Submit/Reset
   onSubmit() {
-    // ručno trigerovanje: vrati na prvu stranicu i emituj promenu
+    if (this.form.invalid) return;              // ne šalji ako datumi nisu validni
     this.form.patchValue({ page: 1 }, { emitEvent: true });
   }
   reset() {
     this.form.reset({ page: 1, size: 50, sort: 'desc' });
   }
+  prevPage() { this.form.patchValue({ page: Math.max(1, this.currentPage() - 1) }); }
+  nextPage() { this.form.patchValue({ page: Math.min(this.maxPage(), this.currentPage() + 1) }); }
 
-  // Paging
-  prevPage() {
-    const p = Math.max(1, this.currentPage() - 1);
-    this.form.patchValue({ page: p });
-  }
-  nextPage() {
-    const p = Math.min(this.maxPage(), this.currentPage() + 1);
-    this.form.patchValue({ page: p });
-  }
-
-  // Chart options
-  pieOptions: any = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: { legend: { position: 'top' } },
-    layout: { padding: 8 }
-  };
-  barOptions: any = {
-    responsive: true,
-    maintainAspectRatio: false,
-    indexAxis: 'y',
-    scales: { x: { beginAtZero: true, ticks: { precision: 0 } } },
-    plugins: { legend: { display: false } },
-    layout: { padding: 8 }
-  };
+  pieOptions: any = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, layout: { padding: 8 } };
+  barOptions: any = { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } }, layout: { padding: 8 } };
 }
