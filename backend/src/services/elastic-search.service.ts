@@ -8,7 +8,7 @@ export async function ensureIndex(es: Client) {
   try {
     const exists = await es.indices.exists({ index });
     if (exists) {
-      logger.info(`Elasticsearch index "${index}" već postoji`);
+      logger.info(`Elasticsearch index "${index}" already exirt!`);
       return;
     }
 
@@ -27,9 +27,9 @@ export async function ensureIndex(es: Client) {
       }
     });
 
-    logger.info(`Elasticsearch index "${index}" je kreiran`);
+    logger.info(`Elasticsearch index "${index}" has been created!`);
   } catch (err) {
-    logger.error({ err }, 'Greška prilikom ensureIndex');
+    logger.error({ err }, 'Error during ensureIndex');
     throw err;
   }
 }

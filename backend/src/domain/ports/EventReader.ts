@@ -1,6 +1,6 @@
 export type SearchFilters = {
     start?: string; end?: string;
-    userId?: string; browser?: string; url?: string; q?: string;
+    userId?: string; browser?: string; url?: string; keyword?: string;
     page?: number; size?: number; sort?: 'asc'|'desc';
   };
   
@@ -11,4 +11,3 @@ export type SearchFilters = {
       topErrorMessages: { key: string; doc_count: number }[];
     }>;
   }
-      

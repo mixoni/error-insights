@@ -7,10 +7,6 @@ type ESBucket = { key: string; doc_count: number };
 export class ElasticEventReader implements EventReader {
   constructor(private es: Client, private index = ENV.ES_INDEX) {}
 
-  /**
-   * Ako korisnik ne pošalje start/end → podrazumevani rang je poslednjih 24h.
-   * Tako izbegavamo "full index scan" i dobijamo očekivano ponašanje za logove.
-   */
   private withDefaultRange(filters: SearchFilters): Required<Pick<SearchFilters, 'start' | 'end'>> & SearchFilters {
     if (filters.start || filters.end) return filters as any;
     const end = new Date();
@@ -18,15 +14,10 @@ export class ElasticEventReader implements EventReader {
     return { ...filters, start: start.toISOString(), end: end.toISOString() } as any;
   }
 
-  /**
-   * Gradimo “mekšu” upit-ku:
-   * - Date range (ako postoji, inače default 24h).
-   * - keyword polja (userId/browser/url) pretražujemo wildcard-om (case-insensitive, contains).
-   * - q ide na text polja (errorMessage^2, stackTrace) sa fuzziness + prefix boost.
-   */
+
   private buildQuery(filters: SearchFilters) {
     const filtersWithDefaultPeriod = {...filters}; // this.withDefaultRange(filters);
-    console.log('ES query filters:', filtersWithDefaultPeriod);
+
     const must: any[] = [];
     const filter: any[] = [];
 
@@ -40,38 +31,26 @@ export class ElasticEventReader implements EventReader {
       },
     });
 
-    // helper za wildcard (case-insensitive "contains")
-    const wc = (field: string, value?: string) =>
-      value
-        ? {
-            wildcard: {
-              [field]: {
-                value: `*${value}*`,
-                case_insensitive: true,
-              },
-            },
-          }
-        : null;
 
-    if (filtersWithDefaultPeriod.userId) must.push(wc('userId', filtersWithDefaultPeriod.userId)!);
-    if (filtersWithDefaultPeriod.browser) must.push(wc('browser', filtersWithDefaultPeriod.browser)!);
-    if (filtersWithDefaultPeriod.url) must.push(wc('url', filtersWithDefaultPeriod.url)!);
+    if (filtersWithDefaultPeriod.userId) must.push(this.wildCard('userId', filtersWithDefaultPeriod.userId)!);
+    if (filtersWithDefaultPeriod.browser) must.push(this.wildCard('browser', filtersWithDefaultPeriod.browser)!);
+    if (filtersWithDefaultPeriod.url) must.push(this.wildCard('url', filtersWithDefaultPeriod.url)!);
 
-    // full-text upit
-    if (filtersWithDefaultPeriod.q) {
+
+    if (filtersWithDefaultPeriod.keyword) {
       must.push({
         multi_match: {
-          query: filtersWithDefaultPeriod.q,
+          query: filtersWithDefaultPeriod.keyword,
           fields: ['errorMessage^2', 'stackTrace'],
           type: 'best_fields',
           operator: 'and',
           fuzziness: 'AUTO',
         },
       });
-      // dodatni prefix boost (npr. "undef" pogodi "undefined")
+
       must.push({
         query_string: {
-          query: `${filtersWithDefaultPeriod.q}*`,
+          query: `${filtersWithDefaultPeriod.keyword}*`,
           fields: ['errorMessage^2', 'stackTrace'],
           default_operator: 'AND',
         },
@@ -82,7 +61,7 @@ export class ElasticEventReader implements EventReader {
   }
 
   async search(filters: SearchFilters) {
-    const f = this.withDefaultRange(filters);
+    const f = {...filters}; //this.withDefaultRange(filters);
 
     const page = Math.max(1, Number(f.page ?? 1));
     const size = Math.min(500, Math.max(1, Number(f.size ?? 50)));
@@ -98,7 +77,7 @@ export class ElasticEventReader implements EventReader {
       _source: ['timestamp', 'userId', 'browser', 'url', 'errorMessage', 'stackTrace'],
     });
 
-    // total može biti number ili { value }
+    // 
     const total =
       typeof (resp.hits.total as any) === 'number'
         ? (resp.hits.total as any)
@@ -110,7 +89,7 @@ export class ElasticEventReader implements EventReader {
   }
 
   async stats(filters: Omit<SearchFilters, 'page' | 'size' | 'sort'>) {
-    const f = this.withDefaultRange(filters);
+    const f = {...filters}; //this.withDefaultRange(filters);
 
     const resp = await this.es.search({
       index: this.index,
@@ -137,7 +116,6 @@ export class ElasticEventReader implements EventReader {
     return { topBrowsers, topErrorMessages };
   }
 
-  // Bulk index helper (za ingest use-case)
   async bulkIndex(events: any[]) {
     if (!events?.length) return;
     const operations: any[] = [];
@@ -147,4 +125,16 @@ export class ElasticEventReader implements EventReader {
     }
     await this.es.bulk({ refresh: true, operations });
   }
+
+  wildCard = (field: string, value?: string) =>
+    value
+      ? {
+          wildcard: {
+            [field]: {
+              value: `*${value}*`,
+              case_insensitive: true,
+            },
+          },
+        }
+      : null;
 }
