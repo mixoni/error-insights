@@ -20,6 +20,7 @@ import { eventsController } from './controllers/events.controller';
 import { eventsRoutes } from './routes/events.routes';
 import { ensureIndex } from './services/elastic-search.service';
 import { healthCheck } from './services/healt.service';
+import { widgetsRoutes } from './routes/widget.routes';
 
 
 async function main() {
@@ -37,7 +38,7 @@ async function main() {
 
   const search = makeSearchEvents(reader, cache, ENV.CACHE_TTL_SEC);
   const stats  = makeGetStats(reader, cache, ENV.CACHE_TTL_SEC);
-  const ingest = makeIngestEvents(writer, reader);
+  const ingest = makeIngestEvents(writer, reader, redis);
 
   const app = express();
   app.use(cors());
@@ -45,6 +46,7 @@ async function main() {
   app.use(pinoHttp({ logger }));
 
   app.use('/', eventsRoutes(eventsController({ search, stats, ingest })));
+  app.use('/', widgetsRoutes(redis));
 
   // healthcheck
   app.get('/health', async (_req, res) => {

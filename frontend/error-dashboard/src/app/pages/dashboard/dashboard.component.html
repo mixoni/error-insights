@@ -1,119 +1,151 @@
-<div class="page">
+<!-- FILTERS TOOLBAR -->
+<form class="toolbar" [formGroup]="form" (ngSubmit)="onSubmit()">
+  <div class="inputs">
+    <!-- datepickers -->
+    <input type="datetime-local" placeholder="Start" formControlName="start" [attr.max]="maxDateTime()" />
+    <input type="datetime-local" placeholder="End"   formControlName="end"   [attr.max]="maxDateTime()" />
 
-  <!-- Toolbar / Filters -->
-  <form class="toolbar" [formGroup]="form" (ngSubmit)="onSubmit()">
-    <div class="inputs">
-      <input type="datetime-local" placeholder="Start" formControlName="start" [attr.max]="maxDateTime()" lang="sr-RS" />
-      <input type="datetime-local" placeholder="End"   formControlName="end"   [attr.max]="maxDateTime()" lang="sr-RS" />  
-      <input placeholder="user" formControlName="userId" />
-      <input placeholder="browser" formControlName="browser" />
-      <input placeholder="url" formControlName="url" />
-      <input placeholder="keyword (error/stack)" formControlName="keyword" /> 
-    </div>
-    <div class="actions">
-      <div class="presets">
-        <button type="button" class="btn sm" (click)="setPreset('1h')">Last 1h</button>
-        <button type="button" class="btn sm" (click)="setPreset('24h')">24h</button>
-        <button type="button" class="btn sm" (click)="setPreset('7d')">7d</button>
-      </div>
-      <!-- <button type="submit" class="btn primary">Search</button> -->
-      <button type="button" class="btn" (click)="reset()">Reset</button>
-    </div>
-  </form>
-
-  <!-- Meta row -->
-  <div class="meta">
-    <span class="dim">Total</span>
-    <strong>{{ total() }}</strong>
-
-    <span class="sep"></span>
-
-    <span class="dim">Cache</span>
-    <span class="badge" [class.badge--hit]="cacheFlag()==='hit'" [class.badge--miss]="cacheFlag()==='miss'">
-      {{ cacheFlag() || '—' }}
-    </span>
+    <input placeholder="userId"  formControlName="userId" />
+    <input placeholder="browser" formControlName="browser" />
+    <input placeholder="url"     formControlName="url" />
+    <input placeholder="keyword (error/stack)" formControlName="q" />
   </div>
 
-  <!-- Content grid -->
-  <div class="grid">
+  <div class="actions">
+    <!-- presets -->
+    <div class="presets">
+      <button type="button" class="btn sm" (click)="setPreset('1h')">Last 1h</button>
+      <button type="button" class="btn sm" (click)="setPreset('24h')">24h</button>
+      <button type="button" class="btn sm" (click)="setPreset('7d')">7d</button>
+    </div>
 
-    <!-- Errors card -->
-    <section class="card">
-      <header class="card__header">
-        <h3 class="card__title">Errors</h3>
-      </header>
-
-      <div class="table-wrap">
-        <table class="tbl" *ngIf="events().length">
-          <thead>
-            <tr>
-              <th>timestamp</th>
-              <th>user</th>
-              <th>browser</th>
-              <th>url</th>
-              <th>error message</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let e of events()">
-              <td>{{ e.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</td>
-              <td>{{ e.userId }}</td>
-              <td>{{ e.browser }}</td>
-              <td class="mono">{{ e.url }}</td>
-              <td class="msg" title="{{ e.errorMessage }}">{{ e.errorMessage }}</td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <!-- <div class="pager" *ngIf="events().length">
-              <button type="button" class="btn sm" (click)="prevPage()" [disabled]="currentPage() <= 1">Prev</button>
-              <span class="dim">Page</span>
-              <strong>{{ currentPage() }}</strong>
-              <span class="dim">/ {{ maxPage() }}</span>
-              <span class="dim">· Size</span>
-              <select class="select sm" [formControl]="form.controls.size">
-                <option [value]="10">10</option>
-                <option [value]="25">25</option>
-                <option [value]="50">50</option>
-                <option [value]="100">100</option>
-              </select>
-              <button type="button" class="btn sm" (click)="nextPage()" [disabled]="currentPage() >= maxPage()">Next</button>
-            </div> -->
-          </tfoot>
-        </table>
-
-        <div *ngIf="loading()" class="chip chip--loading">Loading…</div>
-        <div *ngIf="!loading() && !events().length" class="chip">No data</div>
-      </div>
-    </section>
-
-    <!-- Charts card -->
-    <section class="card" *ngIf="stats() as s">
-      <header class="card__header">
-        <h3 class="card__title">Top Browsers</h3>
-      </header>
-
-      <div class="charts">
-        <div class="chart">
-          <div class="chart-box">
-            <canvas baseChart [type]="'pie'" [data]="browsersChartData()" [options]="pieOptions"></canvas>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section class="card" *ngIf="stats() as s">
-      <header class="card__header">
-        <h3 class="card__title">Error Messages</h3>
-      </header>
-
-      <div class="charts">
-        <div class="chart">
-          <div class="chart-box">
-            <canvas baseChart [type]="'bar'" [data]="errorMessagesChartData()" [options]="barOptions"></canvas>
-          </div>
-        </div>
-      </div>
-    </section>
-
+    <!-- <button type="submit" class="btn primary" [disabled]="loading() || form.invalid">Search</button> -->
+    <button type="button" class="btn" (click)="reset()">Reset</button>
   </div>
+</form>
+
+<!-- validation messages -->
+<div class="form-errors" *ngIf="form.errors as fe">
+  <span *ngIf="fe['startInFuture']">Start date ne može biti u budućnosti.</span>
+  <span *ngIf="fe['endInFuture']">End date ne može biti u budućnosti.</span>
+  <span *ngIf="fe['startAfterEnd']">Start date mora biti pre End datuma.</span>
 </div>
+
+<!-- ERRORS LIST CARD -->
+<section class="card">
+  <header class="card__header">
+    <h3 class="card__title">Errors</h3>
+
+    <div class="meta">
+      <span class="chip">Total: {{ total() }}</span>
+      <span *ngIf="cacheFlag()" class="chip">Search cache: {{ cacheFlag() }}</span>
+      <span *ngIf="loading()" class="chip warn">Loading…</span>
+    </div>
+  </header>
+
+  <div class="table-wrap" *ngIf="events().length; else noDataTpl">
+    <table class="tbl">
+      <thead>
+        <tr>
+          <th style="width: 200px">timestamp</th>
+          <th style="width: 120px">userId</th>
+          <th style="width: 120px">browser</th>
+          <th>url</th>
+          <th>errorMessage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let e of events()">
+          <td>{{ e.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</td>
+          <td>{{ e.userId }}</td>
+          <td>{{ e.browser }}</td>
+          <td class="mono ellipsis">{{ e.url }}</td>
+          <td class="ellipsis">{{ e.errorMessage }}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <!-- pager -->
+    <div class="pager">
+      <button type="button" class="btn" (click)="prevPage()" [disabled]="currentPage() <= 1">Prev</button>
+      <span>Page {{ currentPage() }} / {{ maxPage() }}</span>
+      <span class="sep">·</span>
+      <label>Size
+        <select [formControl]="form.controls.size">
+          <option [value]="10">10</option>
+          <option [value]="25">25</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+      </label>
+      <button
+        type="button"
+        class="btn"
+        (click)="nextPage()"
+        [disabled]="currentPage() >= maxPage()"
+        title="No more pages"
+      >
+        Next
+      </button>
+    </div>
+  </div>
+
+  <ng-template #noDataTpl>
+    <div class="empty">No data</div>
+  </ng-template>
+</section>
+
+<!-- RESULTS & STATS (ES or Redis) -->
+<section class="card">
+  <header class="card__header">
+    <h3 class="card__title">Results &amp; Stats</h3>
+
+    <!-- source/scope/auto-refresh controls -->
+    <div class="stats-controls">
+      <div class="seg">
+        <button type="button" class="seg__btn" [class.active]="statsSource()==='es'" (click)="statsSource.set('es')">
+          ES
+        </button>
+        <button type="button" class="seg__btn" [class.active]="statsSource()==='redis'" (click)="statsSource.set('redis')">
+          Redis (Live)
+        </button>
+      </div>
+
+      <div class="seg" *ngIf="statsSource()==='redis'">
+        <button type="button" class="seg__btn" [class.active]="redisScope()==='1h'" (click)="redisScope.set('1h')">
+          Last 1h
+        </button>
+        <button type="button" class="seg__btn" [class.active]="redisScope()==='global'" (click)="redisScope.set('global')">
+          Global
+        </button>
+      </div>
+
+      <label class="toggle" *ngIf="statsSource()==='redis'">
+        <input type="checkbox" [checked]="autoRefresh()" (change)="autoRefresh.set($any($event.target).checked)" />
+        <span>Auto-refresh 10s</span>
+      </label>
+    </div>
+  </header>
+
+  <div class="charts" *ngIf="statsView() as s; else noStatsTpl">
+    <div class="chart">
+      <h4>Top Browsers</h4>
+      <div class="chart-box">
+        <canvas baseChart [type]="'pie'" [data]="browsersChartData()" [options]="pieOptions"></canvas>
+      </div>
+    </div>
+
+    <div class="chart">
+      <h4>Top Error Messages</h4>
+      <div class="chart-box">
+        <canvas baseChart [type]="'bar'" [data]="errorMessagesChartData()" [options]="barOptions"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <ng-template #noStatsTpl>
+    <div class="table-wrap">
+      <div class="chip">No stats</div>
+    </div>
+  </ng-template>
+</section>

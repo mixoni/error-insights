@@ -7,50 +7,45 @@ type ESBucket = { key: string; doc_count: number };
 export class ElasticEventReader implements EventReader {
   constructor(private es: Client, private index = ENV.ES_INDEX) {}
 
-  private withDefaultRange(filters: SearchFilters): Required<Pick<SearchFilters, 'start' | 'end'>> & SearchFilters {
-    if (filters.start || filters.end) return filters as any;
-    const end = new Date();
-    const start = new Date(end.getTime() - 100 * 24 * 60 * 60 * 1000);
-    return { ...filters, start: start.toISOString(), end: end.toISOString() } as any;
-  }
-
-
   private buildQuery(filters: SearchFilters) {
-    const filtersWithDefaultPeriod = {...filters}; // this.withDefaultRange(filters);
-
     const must: any[] = [];
     const filter: any[] = [];
 
-    // date range
-    filter.push({
-      range: {
-        timestamp: {
-          ...(filtersWithDefaultPeriod.start ? { gte: filtersWithDefaultPeriod.start } : {}),
-          ...(filtersWithDefaultPeriod.end ? { lte: filtersWithDefaultPeriod.end } : {}),
-        },
-      },
-    });
+    // date range samo ako je prosleđen (nema podrazumevanog)
+    if (filters.start || filters.end) {
+      filter.push({
+        range: {
+          timestamp: {
+            ...(filters.start ? { gte: filters.start } : {}),
+            ...(filters.end   ? { lte: filters.end }   : {}),
+          }
+        }
+      });
+    }
 
+    const wc = (field: string, value?: string) =>
+      value
+        ? { wildcard: { [field]: { value: `*${value}*`, case_insensitive: true } } }
+        : null;
 
-    if (filtersWithDefaultPeriod.userId) must.push(this.wildCard('userId', filtersWithDefaultPeriod.userId)!);
-    if (filtersWithDefaultPeriod.browser) must.push(this.wildCard('browser', filtersWithDefaultPeriod.browser)!);
-    if (filtersWithDefaultPeriod.url) must.push(this.wildCard('url', filtersWithDefaultPeriod.url)!);
+    if (filters.userId)  must.push(wc('userId',  filters.userId)!);
+    if (filters.browser) must.push(wc('browser', filters.browser)!);
+    if (filters.url)     must.push(wc('url',     filters.url)!);
 
-
-    if (filtersWithDefaultPeriod.keyword) {
+    // full-text (errorMessage, stackTrace)
+    if (filters.keyword) {
       must.push({
         multi_match: {
-          query: filtersWithDefaultPeriod.keyword,
+          query: filters.keyword,
           fields: ['errorMessage^2', 'stackTrace'],
           type: 'best_fields',
           operator: 'and',
           fuzziness: 'AUTO',
         },
       });
-
       must.push({
         query_string: {
-          query: `${filtersWithDefaultPeriod.keyword}*`,
+          query: `${filters.keyword}*`,
           fields: ['errorMessage^2', 'stackTrace'],
           default_operator: 'AND',
         },
@@ -61,57 +56,45 @@ export class ElasticEventReader implements EventReader {
   }
 
   async search(filters: SearchFilters) {
-    const f = {...filters}; //this.withDefaultRange(filters);
-
-    const page = Math.max(1, Number(f.page ?? 1));
-    const size = Math.min(500, Math.max(1, Number(f.size ?? 50)));
+    const page = Math.max(1, Number(filters.page ?? 1));
+    const size = Math.min(500, Math.max(1, Number(filters.size ?? 50)));
     const from = (page - 1) * size;
-    const sortOrder = f.sort === 'asc' ? 'asc' : 'desc';
+    const sortOrder = filters.sort === 'asc' ? 'asc' : 'desc';
 
     const resp = await this.es.search({
       index: this.index,
       from,
       size,
       sort: [{ timestamp: { order: sortOrder } }],
-      query: this.buildQuery(f),
-      _source: ['timestamp', 'userId', 'browser', 'url', 'errorMessage', 'stackTrace'],
+      query: this.buildQuery(filters),
+      _source: ['timestamp','userId','browser','url','errorMessage','stackTrace'],
     });
 
-    // 
     const total =
       typeof (resp.hits.total as any) === 'number'
         ? (resp.hits.total as any)
         : ((resp.hits.total as any)?.value ?? 0);
 
-    const items = (resp.hits.hits as any[]).map((h) => ({ id: h._id, ...h._source }));
-
+    const items = (resp.hits.hits as any[]).map(h => ({ id: h._id, ...h._source }));
     return { items, total };
   }
 
-  async stats(filters: Omit<SearchFilters, 'page' | 'size' | 'sort'>) {
-    const f = {...filters}; //this.withDefaultRange(filters);
-
+  async stats(filters: Omit<SearchFilters, 'page'|'size'|'sort'>) {
     const resp = await this.es.search({
       index: this.index,
       size: 0,
-      query: this.buildQuery(f),
+      query: this.buildQuery(filters),
       aggs: {
-        topBrowsers: { terms: { field: 'browser', size: 5, missing: 'unknown' } },
-        topErrorMessages: {
-          terms: { field: 'errorMessage.keyword', size: 5, missing: 'unknown' },
-        },
+        topBrowsers:      { terms: { field: 'browser', size: 5, missing: 'unknown' } },
+        topErrorMessages: { terms: { field: 'errorMessage.keyword', size: 5, missing: 'unknown' } },
       },
     });
 
     const aggs: any = resp.aggregations || {};
-    const topBrowsers: ESBucket[] = (aggs.topBrowsers?.buckets ?? []).map((b: any) => ({
-      key: b.key ?? 'unknown',
-      doc_count: b.doc_count,
-    }));
-    const topErrorMessages: ESBucket[] = (aggs.topErrorMessages?.buckets ?? []).map((b: any) => ({
-      key: b.key ?? 'unknown',
-      doc_count: b.doc_count,
-    }));
+    const topBrowsers: ESBucket[] =
+      (aggs.topBrowsers?.buckets ?? []).map((b: any) => ({ key: b.key ?? 'unknown', doc_count: b.doc_count }));
+    const topErrorMessages: ESBucket[] =
+      (aggs.topErrorMessages?.buckets ?? []).map((b: any) => ({ key: b.key ?? 'unknown', doc_count: b.doc_count }));
 
     return { topBrowsers, topErrorMessages };
   }
@@ -125,16 +108,4 @@ export class ElasticEventReader implements EventReader {
     }
     await this.es.bulk({ refresh: true, operations });
   }
-
-  wildCard = (field: string, value?: string) =>
-    value
-      ? {
-          wildcard: {
-            [field]: {
-              value: `*${value}*`,
-              case_insensitive: true,
-            },
-          },
-        }
-      : null;
 }
