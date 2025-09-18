@@ -44,12 +44,12 @@ export class DashboardComponent {
   }
 
   form = this.fb.group({
-    start: [''],          // 'YYYY-MM-DDTHH:mm'
+    start: [''],    
     end: [''],
     userId: [''],
     browser: [''],
     url: [''],
-    q: [''],
+    keyword: [''],
     page: [1],
     size: [50],
     sort: ['desc'],
@@ -141,6 +141,22 @@ export class DashboardComponent {
   }
   prevPage() { this.form.patchValue({ page: Math.max(1, this.currentPage() - 1) }); }
   nextPage() { this.form.patchValue({ page: Math.min(this.maxPage(), this.currentPage() + 1) }); }
+
+
+  setPreset(kind: '1h'|'24h'|'7d') {
+    const end = new Date();
+    const start = new Date(end);
+    if (kind === '1h')  start.setHours(end.getHours() - 1);
+    if (kind === '24h') start.setDate(end.getDate() - 1);
+    if (kind === '7d')  start.setDate(end.getDate() - 7);
+  
+    this.form.patchValue({
+      start: this.toLocalInputValue(start),
+      end:   this.toLocalInputValue(end),
+      page: 1
+    });
+  }
+
 
   pieOptions: any = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } }, layout: { padding: 8 } };
   barOptions: any = { responsive: true, maintainAspectRatio: false, indexAxis: 'y', scales: { x: { beginAtZero: true, ticks: { precision: 0 } } }, plugins: { legend: { display: false } }, layout: { padding: 8 } };

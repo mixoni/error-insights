@@ -5,12 +5,17 @@
     <div class="inputs">
       <input type="datetime-local" placeholder="Start" formControlName="start" [attr.max]="maxDateTime()" lang="sr-RS" />
       <input type="datetime-local" placeholder="End"   formControlName="end"   [attr.max]="maxDateTime()" lang="sr-RS" />  
-      <input placeholder="userId" formControlName="userId" />
+      <input placeholder="user" formControlName="userId" />
       <input placeholder="browser" formControlName="browser" />
       <input placeholder="url" formControlName="url" />
-      <input placeholder="keyword (error/stack)" formControlName="q" /> 
+      <input placeholder="keyword (error/stack)" formControlName="keyword" /> 
     </div>
     <div class="actions">
+      <div class="presets">
+        <button type="button" class="btn sm" (click)="setPreset('1h')">Last 1h</button>
+        <button type="button" class="btn sm" (click)="setPreset('24h')">24h</button>
+        <button type="button" class="btn sm" (click)="setPreset('7d')">7d</button>
+      </div>
       <!-- <button type="submit" class="btn primary">Search</button> -->
       <button type="button" class="btn" (click)="reset()">Reset</button>
     </div>
