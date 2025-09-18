@@ -1,4 +1,4 @@
-import { buildESQuery } from '../services/query-builder';
+import { buildESQuery } from '../services/query-builder.service';
 
 
 test('buildESQuery adds range and terms', () => {

@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
-import { connectMongo } from './services/mongo';
-import { ensureIndex } from './services/elastic-search';
+import { connectMongo } from './services/mongo.service';
+import { ensureIndex } from './services/elastic-search.service';
 import { registerRoutes } from './routes';
 import { fileURLToPath, pathToFileURL } from 'url';
 

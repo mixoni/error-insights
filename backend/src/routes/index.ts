@@ -1,9 +1,9 @@
 import type { FastifyInstance } from 'fastify';
 import { RawEvent } from '../models/event-model';
-import { esClient } from '../services/elastic-search';
-import { buildESQuery } from '../services/query-builder';
-import { buildAggs } from '../services/aggregate-builder';
-import { cacheGet, cacheKey, cacheSet } from '../services/cache';
+import { esClient } from '../services/elastic-search.service';
+import { buildESQuery } from '../services/query-builder.service';
+import { buildAggs } from '../services/aggregate-builder.service';
+import { cacheGet, cacheKey, cacheSet } from '../services/cache.service';
 
 
 export function registerRoutes(app: FastifyInstance) {

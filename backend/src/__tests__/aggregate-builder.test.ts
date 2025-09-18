@@ -1,4 +1,4 @@
-import { buildAggs } from '../services/aggregate-builder';
+import { buildAggs } from '../services/aggregate-builder.service';
 
 
 test('buildAggs returns expected keys', () => {

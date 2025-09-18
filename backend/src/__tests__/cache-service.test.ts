@@ -9,7 +9,7 @@ jest.mock('ioredis', () => {
   }));
 });
 
-import { cacheKey, cacheGet, cacheSet } from '../services/cache';
+import { cacheKey, cacheGet, cacheSet } from '../services/cache.service';
 
 
 beforeEach(() => {
