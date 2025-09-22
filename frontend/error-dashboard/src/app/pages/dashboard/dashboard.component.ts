@@ -18,6 +18,7 @@ import { finalize } from 'rxjs/operators';
 import { ApiService } from '../../services/api.service';
 import { registerLocaleData } from '@angular/common';
 import localeSr from '@angular/common/locales/sr';
+import { AUTO_REFRESH_MS, prune } from '../../utils/utils.service';
 
 @Component({
   selector: 'app-dashboard',
@@ -107,7 +108,7 @@ export class DashboardComponent {
 
   // --- Stats source toggle: ES aggs or Redis widgets ---
   statsSource = signal<'es' | 'redis'>('es');
-  redisScope  = signal<'global' | '1h'>('1h');
+  redisScope  = signal<'global' | '1h'>('global');
   autoRefresh = signal<boolean>(false); // for Redis mode, 10s
 
   // ES stats (respect filters)
@@ -123,13 +124,12 @@ export class DashboardComponent {
   // Redis widgets (global / 1h) + optional auto-refresh (10s)
   redisStats = toSignal(
     combineLatest([
-      toObservable(this.statsSource),
-      toObservable(this.redisScope),
-      toObservable(this.autoRefresh)
+      toObservable(this.statsSource),   // 'es' | 'redis'
+      toObservable(this.redisScope)     // '1h' | 'global'
     ]).pipe(
-      switchMap(([src, scope, auto]) => {
-        if (src !== 'redis') return of(null); // do not poll when not in Redis mode
-        return timer(0, auto ? 10000 : Infinity).pipe(
+      switchMap(([src, scope]) => {
+        if (src !== 'redis') return of(null); // kad nije Redis, ne pingujemo
+        return timer(0, AUTO_REFRESH_MS).pipe(
           switchMap(() => this.api.getWidgetsTop(scope, 5))
         );
       })
@@ -306,18 +306,22 @@ private trimUndef(v: any) {
 
 private buildPtFilters(cursor: string | null) {
   const f = this.form.getRawValue();
-  return {
-    start: this.trimUndef(f.start),
-    end: this.trimUndef(f.end),
-    userId: this.trimUndef(f.userId),
-    browser: this.trimUndef(f.browser),
-    url: this.trimUndef(f.url),
-    keyword: this.trimUndef(f.q),
-    size: this.trimUndef(f.size),
-    sort: this.trimUndef(f.sort),
-    cursor: cursor ?? undefined,  
-  } as const;
+
+  const raw = {
+    start: f.start,
+    end: f.end,
+    userId: f.userId,
+    browser: f.browser,
+    url: f.url,
+    keyword: f.q,
+    size: f.size,
+    sort: f.sort,
+    cursor: cursor ?? undefined,
+  };
+
+  return prune(raw);
 }
+
 
 loadFirstPt() {
   this.ptLoading.set(true);

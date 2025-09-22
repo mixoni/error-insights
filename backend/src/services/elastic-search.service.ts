@@ -8,7 +8,7 @@ export async function ensureIndex(es: Client) {
   try {
     const exists = await es.indices.exists({ index });
     if (exists) {
-      logger.info(`Elasticsearch index "${index}" already exirt!`);
+      logger.info(`Elasticsearch index "${index}" already exist!`);
       return;
     }
 
@@ -17,6 +17,7 @@ export async function ensureIndex(es: Client) {
       settings: { number_of_shards: 1 },
       mappings: {
         properties: {
+          mongoId: { type: 'keyword' },
           timestamp:   { type: 'date' },
           userId:      { type: 'keyword' },
           browser:     { type: 'keyword' },

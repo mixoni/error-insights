@@ -109,9 +109,12 @@ export class ElasticEventReader implements EventReader {
     console.log(`INDEX ===>`, this.index);
     const operations: any[] = [];
     for (const e of events) {
-        const { _id, __v, ...doc } = e ?? {};
-      operations.push({ index: { _index: this.index } });
+      const { _id, __v, ...doc } = e ?? {};
+
+      if (_id) doc.mongoId = String(_id);
       if (doc.timestamp) doc.timestamp = new Date(doc.timestamp).toISOString();
+
+      operations.push({ index: { _index: this.index } });
       operations.push(doc);
     }
     const resp = await this.es.bulk({ refresh: true, operations });
@@ -133,9 +136,12 @@ export class ElasticEventReader implements EventReader {
     const resp = await this.es.openPointInTime({
       index: this.index,
       keep_alive: keepAlive,
-      // headers compat ako koristiš ES 8.x: accept v8
     });
-    return resp.id as string;
+    console.log('[PIT open] resp=', resp);
+    const pitId = (resp as any).pit_id ?? (resp as any).id;
+    if (!pitId) throw new Error('openPit: missing pit id in response');
+    console.log('[PIT open] id=', pitId);
+    return pitId;
   }
 
   async closePit(pitId: string) {
@@ -155,7 +161,7 @@ export class ElasticEventReader implements EventReader {
       size: Math.min(500, Math.max(1, size)),
       sort: [
         { timestamp: { order } },
-        { _id: { order } }
+        { mongoId: { order } }
       ],
       query: this.buildQuery(filters),
       _source: ['timestamp','userId','browser','url','errorMessage','stackTrace'],

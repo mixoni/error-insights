@@ -1,5 +1,5 @@
 export function normalizeFiltersForCache(f: any) {
-    const lc = (s?: string) => (s ?? '').trim().toLowerCase();
+    const toLowerCaseAndTrim = (s?: string) => (s ?? '').trim().toLowerCase();
     const roundIsoToMin = (iso?: string) => {
       if (!iso) return '';
       const d = new Date(iso);
@@ -10,10 +10,10 @@ export function normalizeFiltersForCache(f: any) {
       ...f,
       start: roundIsoToMin(f.start),
       end:   roundIsoToMin(f.end),
-      userId:  lc(f.userId),
-      browser: lc(f.browser),
-      url:     lc(f.url),
-      q:       lc(f.q),
+      userId:  toLowerCaseAndTrim(f.userId),
+      browser: toLowerCaseAndTrim(f.browser),
+      url:     toLowerCaseAndTrim(f.url),
+      q:       toLowerCaseAndTrim(f.q),
       page: Number(f.page ?? 1),
       size: Number(f.size ?? 50),
       sort: f.sort === 'asc' ? 'asc' : 'desc',
