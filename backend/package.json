@@ -8,6 +8,7 @@
     "start": "tsx watch src/app.ts",
     "build": "tsc -p .",
     "test": "jest",
+    "bulk-seed-10k": "tsx src/scripts/seed-errors.ts --noOfEvents=10000 --batchPerRequest=500 --concurrencyRequestMax=4 --api=http://localhost:3000/ingest",
     "seed": "curl -X POST http://localhost:3000/ingest -H \"Content-Type: application/json\" --data-binary @../seed/events.sample.json"
   },
   "jest": {

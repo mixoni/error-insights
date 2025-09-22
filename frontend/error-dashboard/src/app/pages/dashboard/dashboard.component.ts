@@ -137,17 +137,39 @@ export class DashboardComponent {
 
   // Unified stats view for charts
   statsView = computed(() => {
-    if (this.statsSource() === 'redis') {
+    const fromRedis = this.statsSource() === 'redis';
+  
+    if (fromRedis) {
       const r = this.redisStats();
       if (!r) return null;
+  
+      const topBrowsers = (r.topBrowsers ?? []).map(x => ({ key: x.key, doc_count: x.count }));
+      const topErrorMessages = (r.topErrorMessages ?? []).map(x => ({ key: x.key, doc_count: x.count }));
+  
+      const hasData =
+        topBrowsers.some(x => (x.doc_count ?? 0) > 0) ||
+        topErrorMessages.some(x => (x.doc_count ?? 0) > 0);
+  
+      if (!hasData) return null;
+  
       return {
-        topBrowsers: (r.topBrowsers || []).map(x => ({ key: x.key, doc_count: x.count })),
-        topErrorMessages: (r.topErrorMessages || []).map(x => ({ key: x.key, doc_count: x.count })),
+        topBrowsers,
+        topErrorMessages,
         cache: r.cache ?? 'hit'
       };
     }
-    return this.esStats();
+  
+    // ES grana – obavezno vrati null kad nema podataka
+    const es = this.esStats();
+    if (!es) return null;
+  
+    const hasData =
+      (es.topBrowsers?.some(x => (x.doc_count ?? 0) > 0) ?? false) ||
+      (es.topErrorMessages?.some(x => (x.doc_count ?? 0) > 0) ?? false);
+  
+    return hasData ? es : null;
   });
+  
 
   // --- Derived from search ---
   cacheFlag = computed(() => this.search()?.cache ?? null);

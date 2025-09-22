@@ -23,14 +23,14 @@ export class ElasticEventReader implements EventReader {
       });
     }
 
-    const wc = (field: string, value?: string) =>
+    const wildCardWrapper = (field: string, value?: string) =>
       value
         ? { wildcard: { [field]: { value: `*${value}*`, case_insensitive: true } } }
         : null;
 
-    if (filters.userId)  must.push(wc('userId',  filters.userId)!);
-    if (filters.browser) must.push(wc('browser', filters.browser)!);
-    if (filters.url)     must.push(wc('url',     filters.url)!);
+    if (filters.userId)  must.push(wildCardWrapper('userId',  filters.userId)!);
+    if (filters.browser) must.push(wildCardWrapper('browser', filters.browser)!);
+    if (filters.url)     must.push(wildCardWrapper('url',     filters.url)!);
 
     // full-text (errorMessage, stackTrace)
     if (filters.keyword) {
@@ -86,7 +86,7 @@ export class ElasticEventReader implements EventReader {
       query: this.buildQuery(filters),
       aggs: {
         topBrowsers:      { terms: { field: 'browser', size: 5, missing: 'unknown' } },
-        topErrorMessages: { terms: { field: 'errorMessage.keyword', size: 5, missing: 'unknown' } },
+        topErrorMessages: { terms: { field: 'errorMessage.keyword', size:    5, missing: 'unknown' } },
       },
     });
 
@@ -100,12 +100,73 @@ export class ElasticEventReader implements EventReader {
   }
 
   async bulkIndex(events: any[]) {
+    console.log(`Bulk indexing ${events.length} events to ES...`);
     if (!events?.length) return;
+
+    console.log(`INDEX ===>`, this.index);
     const operations: any[] = [];
     for (const e of events) {
+        const { _id, __v, ...doc } = e ?? {};
       operations.push({ index: { _index: this.index } });
-      operations.push(e);
+      if (doc.timestamp) doc.timestamp = new Date(doc.timestamp).toISOString();
+      operations.push(doc);
     }
-    await this.es.bulk({ refresh: true, operations });
+    const resp = await this.es.bulk({ refresh: true, operations });
+
+    const items = (resp as any).items ?? [];
+    if ((resp as any).errors) {
+    const failures = items
+        .map((it: any, i: number) => ({ i, status: it.index?.status, error: it.index?.error }))
+        .filter((x: any) => !!x.error);
+    console.error(`[ES bulk] ERRORS ${failures.length}/${items.length} ->`, failures.slice(0,3));
+    } else {
+    console.log(`[ES bulk] OK indexed=${items.length} index=${this.index}`);
+    }
   }
+
+
+  //#region Point-in-time (PIT) search after for dataset more than 10k items. Need to adjust different UI and UX for this. 
+  async openPit(keepAlive: string = '2m') {
+    const resp = await this.es.openPointInTime({
+      index: this.index,
+      keep_alive: keepAlive,
+      // headers compat ako koristiš ES 8.x: accept v8
+    });
+    return resp.id as string;
+  }
+
+  async closePit(pitId: string) {
+    try { await this.es.closePointInTime({ body: { id: pitId } }); } catch {}
+  }
+
+  async searchAfter(params: {
+    size: number;
+    order: 'asc' | 'desc';
+    pitId: string;
+    searchAfterSort?: [number | string, string] | null;
+    filters: any;
+  }) {
+    const { size, order, pitId, searchAfterSort, filters } = params;
+
+    const body: any = {
+      size: Math.min(500, Math.max(1, size)),
+      sort: [
+        { timestamp: { order } },
+        { _id: { order } }
+      ],
+      query: this.buildQuery(filters),
+      _source: ['timestamp','userId','browser','url','errorMessage','stackTrace'],
+      pit: { id: pitId, keep_alive: '2m' }
+    };
+    if (searchAfterSort) body.search_after = searchAfterSort;
+
+    const resp = await this.es.search(body);
+    const hits = (resp.hits?.hits ?? []) as any[];
+    const items = hits.map(h => ({ id: h._id, ...(h._source || {}) }));
+    const lastSort = hits.length ? (hits[hits.length - 1].sort as any) : null;
+
+    const total = (resp.hits.total as any)?.value ?? 0;
+    return { items, total, lastSort };
+  }
+  //#endregion
 }

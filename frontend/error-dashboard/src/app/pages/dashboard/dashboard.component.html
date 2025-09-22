@@ -31,25 +31,31 @@
   <span *ngIf="fe['startAfterEnd']">Start date mora biti pre End datuma.</span>
 </div>
 
-<!-- ERRORS LIST CARD -->
-<section class="card">
-  <header class="card__header">
-    <h3 class="card__title">Errors</h3>
-
-    <div class="meta">
-      <span class="chip">Total: {{ total() }}</span>
-      <span *ngIf="cacheFlag()" class="chip">Search cache: {{ cacheFlag() }}</span>
-      <span *ngIf="loading()" class="chip warn">Loading…</span>
+<!-- ERRORS -->
+<section class="card errors-card">
+  <header class="card-title">
+    <span>Errors</span>
+  
+    <div class="meta" *ngIf="true">
+      <span class="meta-item">Total <strong>{{ total() }}</strong></span>
+  
+      <span class="badge"
+            *ngIf="cacheFlag() as cf"
+            [class.badge-hit]="cf === 'hit'"
+            [class.badge-miss]="cf === 'miss'">
+        Cache: {{ cf | uppercase }}
+      </span>
     </div>
   </header>
 
-  <div class="table-wrap" *ngIf="events().length; else noDataTpl">
-    <table class="tbl">
+  <!-- scrollable body -->
+  <div class="card-body scroll-area">
+    <table class="tbl" *ngIf="events().length">
       <thead>
         <tr>
-          <th style="width: 200px">timestamp</th>
-          <th style="width: 120px">userId</th>
-          <th style="width: 120px">browser</th>
+          <th>timestamp</th>
+          <th>userId</th>
+          <th>browser</th>
           <th>url</th>
           <th>errorMessage</th>
         </tr>
@@ -59,17 +65,26 @@
           <td>{{ e.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</td>
           <td>{{ e.userId }}</td>
           <td>{{ e.browser }}</td>
-          <td class="mono ellipsis">{{ e.url }}</td>
-          <td class="ellipsis">{{ e.errorMessage }}</td>
+          <td>{{ e.url }}</td>
+          <td class="msg">{{ e.errorMessage }}</td>
         </tr>
       </tbody>
     </table>
 
-    <!-- pager -->
-    <div class="pager">
-      <button type="button" class="btn" (click)="prevPage()" [disabled]="currentPage() <= 1">Prev</button>
+    <div *ngIf="loading()" class="loading-row">Loading…</div>
+    <div *ngIf="!loading() && !events().length" class="empty-row">No data</div>
+  </div>
+
+  <!-- sticky pager footer -->
+  <footer class="card-footer pager">
+    <div class="pager-left">
+      <button type="button"
+              (click)="prevPage()"
+              [disabled]="currentPage() <= 1">Prev</button>
+      <span class="sep"></span>
       <span>Page {{ currentPage() }} / {{ maxPage() }}</span>
-      <span class="sep">·</span>
+    </div>
+    <div class="pager-right">
       <label>Size
         <select [formControl]="form.controls.size">
           <option [value]="10">10</option>
@@ -78,22 +93,13 @@
           <option [value]="100">100</option>
         </select>
       </label>
-      <button
-        type="button"
-        class="btn"
-        (click)="nextPage()"
-        [disabled]="currentPage() >= maxPage()"
-        title="No more pages"
-      >
-        Next
-      </button>
+      <button type="button"
+              (click)="nextPage()"
+              [disabled]="currentPage() >= maxPage()">Next</button>
     </div>
-  </div>
-
-  <ng-template #noDataTpl>
-    <div class="empty">No data</div>
-  </ng-template>
+  </footer>
 </section>
+
 
 <!-- RESULTS & STATS (ES or Redis) -->
 <section class="card">
