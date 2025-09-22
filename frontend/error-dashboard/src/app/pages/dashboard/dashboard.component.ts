@@ -16,6 +16,8 @@ import {
 } from 'rxjs';
 import { finalize } from 'rxjs/operators';
 import { ApiService } from '../../services/api.service';
+import { registerLocaleData } from '@angular/common';
+import localeSr from '@angular/common/locales/sr';
 
 @Component({
   selector: 'app-dashboard',
@@ -186,6 +188,7 @@ export class DashboardComponent {
   errorMessagesChartData = signal<{ labels: string[]; datasets: any[] }>({ labels: [], datasets: [] });
 
   constructor() {
+    registerLocaleData(localeSr, 'sr-RS');
     // update charts whenever active stats source/view changes
     toObservable(this.statsView).subscribe(s => {
       if (!s) return;
@@ -292,25 +295,53 @@ ptItems = signal<any[]>([]);
 ptDone = signal(false);
 ptLoading = signal(false);
 
+private trimUndef(v: any) {
+  if (v === null || v === undefined) return undefined;
+  if (typeof v === 'string') {
+    const t = v.trim();
+    return t ? t : undefined;
+  }
+  return v;
+}
+
+private buildPtFilters(cursor: string | null) {
+  const f = this.form.getRawValue();
+  return {
+    start: this.trimUndef(f.start),
+    end: this.trimUndef(f.end),
+    userId: this.trimUndef(f.userId),
+    browser: this.trimUndef(f.browser),
+    url: this.trimUndef(f.url),
+    keyword: this.trimUndef(f.q),
+    size: this.trimUndef(f.size),
+    sort: this.trimUndef(f.sort),
+    cursor: cursor ?? undefined,  
+  } as const;
+}
+
 loadFirstPt() {
   this.ptLoading.set(true);
-  const f = this.form.getRawValue();
-  this.api.getSearchPt({ ...f, cursor: null, size: this.pageSize() }).subscribe((res: any) => {
+  const params = this.buildPtFilters(null);
+  this.api.getSearchPt(params).subscribe(res => {
     this.ptItems.set(res.items ?? []);
     this.cursorToken.set(res.cursor ?? null);
     this.ptDone.set(!!res.done);
     this.ptLoading.set(false);
   });
 }
+
+
 loadMorePt() {
   if (this.ptDone() || !this.cursorToken()) return;
   this.ptLoading.set(true);
-  const f = this.form.getRawValue();
-  this.api.getSearchPt({ ...f, cursor: this.cursorToken(), size: this.pageSize() }).subscribe((res: any) => {
+  const params = this.buildPtFilters(this.cursorToken());
+  this.api.getSearchPt(params).subscribe(res => {
     this.ptItems.set([...(this.ptItems() ?? []), ...(res.items ?? [])]);
     this.cursorToken.set(res.cursor ?? null);
     this.ptDone.set(!!res.done);
     this.ptLoading.set(false);
   });
 }
+
+
 }

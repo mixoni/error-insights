@@ -25,6 +25,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@angular/common": "^20.3.1",
     "@elastic/elasticsearch": "^8.13.0",
     "@fastify/cors": "^11.1.0",
     "@types/cors": "^2.8.19",

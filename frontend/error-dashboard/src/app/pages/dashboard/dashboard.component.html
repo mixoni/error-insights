@@ -36,13 +36,30 @@
   <header class="card-title">
     <span>Errors</span>
 
-    <div class="mode-toggle">
-      <label><input type="radio" name="mode" [checked]="viewMode()==='paged'" (change)="toggleViewMode('paged')"> Paged</label>
-      <label><input type="radio" name="mode" [checked]="viewMode()==='infinite'" (change)="toggleViewMode('infinite')"> Load more (Infinite)</label>
+    <div class="seg seg--inline mode-toggle">
+      <button
+        type="button"
+        class="seg__btn"
+        [class.active]="viewMode()==='paged'"
+        (click)="toggleViewMode('paged')"
+        aria-pressed="{{ viewMode()==='paged' }}"
+      >
+        Paged
+      </button>
+      <button
+        type="button"
+        class="seg__btn"
+        [class.active]="viewMode()==='infinite'"
+        (click)="toggleViewMode('infinite')"
+        aria-pressed="{{ viewMode()==='infinite' }}"
+      >
+        Load more (Infinite)
+      </button>
     </div>
 
+
     <div class="meta">
-      <span class="meta-item">Total <strong>{{ total() }}</strong></span>
+      <span class="meta-item">Total <strong>{{ total() | number:'1.0-0' : 'sr-RS' }}</strong></span>
       <span class="badge"
             *ngIf="cacheFlag() as cf"
             [class.badge-hit]="cf === 'hit'"
