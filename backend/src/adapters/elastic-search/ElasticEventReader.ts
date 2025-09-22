@@ -58,8 +58,12 @@ export class ElasticEventReader implements EventReader {
   async search(filters: SearchFilters) {
     const page = Math.max(1, Number(filters.page ?? 1));
     const size = Math.min(500, Math.max(1, Number(filters.size ?? 50)));
-    const from = (page - 1) * size;
     const sortOrder = filters.sort === 'asc' ? 'asc' : 'desc';
+    
+    const MAX_WINDOW = 10000; // TODO: Candidate to move it in some config file
+    const from = Math.max(0, (page - 1) * size);
+    const cappedFrom = Math.min(from, Math.max(0, MAX_WINDOW - size));
+    const windowCapped = cappedFrom !== from;
 
     const resp = await this.es.search({
       index: this.index,
@@ -70,13 +74,12 @@ export class ElasticEventReader implements EventReader {
       _source: ['timestamp','userId','browser','url','errorMessage','stackTrace'],
     });
 
-    const total =
-      typeof (resp.hits.total as any) === 'number'
+    const total = typeof (resp.hits.total as any) === 'number'
         ? (resp.hits.total as any)
         : ((resp.hits.total as any)?.value ?? 0);
 
     const items = (resp.hits.hits as any[]).map(h => ({ id: h._id, ...h._source }));
-    return { items, total };
+    return { items, total, windowCapped };
   }
 
   async stats(filters: Omit<SearchFilters, 'page'|'size'|'sort'>) {

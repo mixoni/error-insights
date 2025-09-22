@@ -6,6 +6,7 @@ export function eventsRoutes(ctrl: ReturnType<typeof eventsController>) {
   r.get('/events/search', ctrl.search);
   r.get('/events/stats', ctrl.stats);
   r.post('/ingest', ctrl.ingest);
+  r.get('/events/search-pt', ctrl.searchPIT);
   
   return r;
 }

@@ -31,4 +31,8 @@ export class ApiService {
         cache?: 'hit'|'miss';
         }>('/api/widgets/top', { params });
     }
+    
+    getSearchPt(params: any) {
+        return this.http.get<any>('/api/events/search-pt', { params });
+      }
 }

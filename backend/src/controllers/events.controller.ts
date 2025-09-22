@@ -5,6 +5,7 @@ export function eventsController(deps: {
   search: (f: any) => Promise<any>;
   stats: (f: any) => Promise<any>;
   ingest: (events: any[]) => Promise<void>;
+  searchPIT: (f: any) => Promise<any>;
 }) {
   return {
     search: async (req: Request, res: Response) => {
@@ -21,6 +22,14 @@ export function eventsController(deps: {
     ingest: async (req: Request, res: Response) => {
       await deps.ingest(req.body);
       res.status(202).json({ ok: true });
-    }
+    },
+    searchPIT: async (req: Request, res: Response) => {
+        try {
+          const data = await deps.searchPIT(req.query as any);
+          res.json(data);
+        } catch (e: any) {
+          res.status(500).json({ error: e?.message || 'search-pt failed' });
+        }
+      },
   };
 }

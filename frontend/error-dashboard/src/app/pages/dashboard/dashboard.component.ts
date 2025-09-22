@@ -246,4 +246,71 @@ export class DashboardComponent {
     plugins: { legend: { display: false } },
     layout: { padding: 8 }
   };
+
+  // === NOVO: mod prikaza ===
+viewMode = signal<'paged'|'infinite'>('paged'); 
+toggleViewMode(mode: 'paged'|'infinite') {
+  if (this.viewMode() === mode) return;
+  
+  this.viewMode.set(mode);
+
+  if (mode === 'infinite') {
+    this.ptItems.set([]);
+    this.cursorToken.set(null);
+    this.ptDone.set(false);
+    this.loadFirstPt();
+  } 
+}
+
+// === NOVO: go-to page (samo za 'paged') ===
+gotoPageInput = signal<number | null>(null);
+goToPage() {
+  const p = Number(this.gotoPageInput() ?? NaN);
+  if (!Number.isFinite(p) || p < 1) return;
+  // “window guard”: ne dozvoli offset > 10k
+  const maxPageByWindow = this.maxPageByWindow();
+  const clamped = Math.min(p, maxPageByWindow);
+  this.form.patchValue({ page: clamped });
+}
+
+updateGotoPageInput(value: string) {
+  this.gotoPageInput.set(value ? Number(value) : null);
+}
+
+// === NOVO: guard za ES max_result_window (10k by default)
+private readonly ES_MAX_WINDOW = 10000; // limit by ES by default
+maxPageByWindow = computed(() => {
+  const size = this.pageSize();
+  if (size <= 0) return 1;
+  return Math.max(1, Math.floor(this.ES_MAX_WINDOW / size));
+});
+windowCapped = computed(() => this.currentPage() >= this.maxPageByWindow());
+
+// === NOVO: PT (PIT/search_after) state – zadržavamo raniju skicu, samo je dodaj ako je nemaš
+cursorToken = signal<string | null>(null);
+ptItems = signal<any[]>([]);
+ptDone = signal(false);
+ptLoading = signal(false);
+
+loadFirstPt() {
+  this.ptLoading.set(true);
+  const f = this.form.getRawValue();
+  this.api.getSearchPt({ ...f, cursor: null, size: this.pageSize() }).subscribe((res: any) => {
+    this.ptItems.set(res.items ?? []);
+    this.cursorToken.set(res.cursor ?? null);
+    this.ptDone.set(!!res.done);
+    this.ptLoading.set(false);
+  });
+}
+loadMorePt() {
+  if (this.ptDone() || !this.cursorToken()) return;
+  this.ptLoading.set(true);
+  const f = this.form.getRawValue();
+  this.api.getSearchPt({ ...f, cursor: this.cursorToken(), size: this.pageSize() }).subscribe((res: any) => {
+    this.ptItems.set([...(this.ptItems() ?? []), ...(res.items ?? [])]);
+    this.cursorToken.set(res.cursor ?? null);
+    this.ptDone.set(!!res.done);
+    this.ptLoading.set(false);
+  });
+}
 }

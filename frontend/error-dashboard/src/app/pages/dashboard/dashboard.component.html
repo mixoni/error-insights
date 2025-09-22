@@ -26,38 +26,38 @@
 
 <!-- validation messages -->
 <div class="form-errors" *ngIf="form.errors as fe">
-  <span *ngIf="fe['startInFuture']">Start date ne može biti u budućnosti.</span>
-  <span *ngIf="fe['endInFuture']">End date ne može biti u budućnosti.</span>
-  <span *ngIf="fe['startAfterEnd']">Start date mora biti pre End datuma.</span>
+  <span *ngIf="fe['startInFuture']">Start date cannot be in the future.</span>
+  <span *ngIf="fe['endInFuture']">End date cannot be in the future.</span>
+  <span *ngIf="fe['startAfterEnd']">Start date must be before End date.</span>
 </div>
 
 <!-- ERRORS -->
 <section class="card errors-card">
   <header class="card-title">
     <span>Errors</span>
-  
-    <div class="meta" *ngIf="true">
+
+    <div class="mode-toggle">
+      <label><input type="radio" name="mode" [checked]="viewMode()==='paged'" (change)="toggleViewMode('paged')"> Paged</label>
+      <label><input type="radio" name="mode" [checked]="viewMode()==='infinite'" (change)="toggleViewMode('infinite')"> Load more (Infinite)</label>
+    </div>
+
+    <div class="meta">
       <span class="meta-item">Total <strong>{{ total() }}</strong></span>
-  
       <span class="badge"
             *ngIf="cacheFlag() as cf"
             [class.badge-hit]="cf === 'hit'"
             [class.badge-miss]="cf === 'miss'">
-        Cache: {{ cf | uppercase }}
+        CACHE: {{ cf | uppercase }}
       </span>
     </div>
   </header>
 
-  <!-- scrollable body -->
-  <div class="card-body scroll-area">
+  <!-- Paged tabela -->
+  <div class="card-body scroll-area" *ngIf="viewMode()==='paged'">
     <table class="tbl" *ngIf="events().length">
       <thead>
         <tr>
-          <th>timestamp</th>
-          <th>userId</th>
-          <th>browser</th>
-          <th>url</th>
-          <th>errorMessage</th>
+          <th>timestamp</th><th>userId</th><th>browser</th><th>url</th><th>errorMessage</th>
         </tr>
       </thead>
       <tbody>
@@ -70,20 +70,51 @@
         </tr>
       </tbody>
     </table>
-
     <div *ngIf="loading()" class="loading-row">Loading…</div>
     <div *ngIf="!loading() && !events().length" class="empty-row">No data</div>
   </div>
 
-  <!-- sticky pager footer -->
-  <footer class="card-footer pager">
+  <!-- Infinite tabela -->
+  <div class="card-body scroll-area" *ngIf="viewMode()==='infinite'">
+    <table class="tbl" *ngIf="ptItems().length">
+      <thead>
+        <tr>
+          <th>timestamp</th><th>userId</th><th>browser</th><th>url</th><th>errorMessage</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let e of ptItems()">
+          <td>{{ e.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</td>
+          <td>{{ e.userId }}</td>
+          <td>{{ e.browser }}</td>
+          <td>{{ e.url }}</td>
+          <td class="msg">{{ e.errorMessage }}</td>
+        </tr>
+      </tbody>
+    </table>
+    <div *ngIf="ptLoading()" class="loading-row">Loading…</div>
+    <div *ngIf="!ptLoading() && !ptItems().length" class="empty-row">No data</div>
+  </div>
+
+  <!-- Paged footer -->
+  <footer class="card-footer pager" *ngIf="viewMode()==='paged'">
     <div class="pager-left">
-      <button type="button"
-              (click)="prevPage()"
-              [disabled]="currentPage() <= 1">Prev</button>
+      <button type="button" (click)="prevPage()" [disabled]="currentPage() <= 1">Prev</button>
       <span class="sep"></span>
       <span>Page {{ currentPage() }} / {{ maxPage() }}</span>
     </div>
+
+    <div class="goto">
+      <label>Go to page
+        <input type="number" min="1"
+               [value]="gotoPageInput() ?? ''"
+               max="{{ maxPage() }}"
+               (input)="updateGotoPageInput($event.target.value)">
+      </label>
+      <button type="button" (click)="goToPage()">Go</button>
+      <small *ngIf="maxPageByWindow() < maxPage()">Window cap: up to {{ maxPageByWindow() }} (10k window)</small>
+    </div>
+
     <div class="pager-right">
       <label>Size
         <select [formControl]="form.controls.size">
@@ -95,10 +126,29 @@
       </label>
       <button type="button"
               (click)="nextPage()"
-              [disabled]="currentPage() >= maxPage()">Next</button>
+              [disabled]="currentPage() >= maxPage() || windowCapped()">Next</button>
+    </div>
+  </footer>
+
+  <!-- Infinite footer -->
+  <footer class="card-footer pager" *ngIf="viewMode()==='infinite'">
+    <div class="pager-left">
+      <button type="button" (click)="loadFirstPt()" *ngIf="!ptItems().length && !ptLoading()">Load first</button>
+      <button type="button" (click)="loadMorePt()" [disabled]="ptLoading() || ptDone()" *ngIf="ptItems().length">Load more</button>
+      <span *ngIf="ptDone()">No more results</span>
+    </div>
+    <div class="pager-right">
+      <label>Batch size
+        <select [formControl]="form.controls.size">
+          <option [value]="25">25</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+      </label>
     </div>
   </footer>
 </section>
+
 
 
 <!-- RESULTS & STATS (ES or Redis) -->
