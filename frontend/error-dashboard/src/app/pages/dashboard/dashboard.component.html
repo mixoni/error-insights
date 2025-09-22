@@ -1,221 +1,139 @@
-<!-- FILTERS TOOLBAR -->
-<form class="toolbar" [formGroup]="form" (ngSubmit)="onSubmit()">
-  <div class="inputs">
-    <!-- datepickers -->
-    <input type="datetime-local" placeholder="Start" formControlName="start" [attr.max]="maxDateTime()" />
-    <input type="datetime-local" placeholder="End"   formControlName="end"   [attr.max]="maxDateTime()" />
+<div class="dash">
 
-    <input placeholder="userId"  formControlName="userId" />
-    <input placeholder="browser" formControlName="browser" />
-    <input placeholder="url"     formControlName="url" />
-    <input placeholder="keyword (error/stack)" formControlName="q" />
-  </div>
+  <!-- FILTERS -->
+  <app-filters-bar
+    class="card"
+    [form]="form"
+    (preset)="setPreset($event)"
+    (reset)="reset()">
+  </app-filters-bar>
 
-  <div class="actions">
-    <!-- presets -->
-    <div class="presets">
-      <button type="button" class="btn sm" (click)="setPreset('1h')">Last 1h</button>
-      <button type="button" class="btn sm" (click)="setPreset('24h')">24h</button>
-      <button type="button" class="btn sm" (click)="setPreset('7d')">7d</button>
+  <!-- ERRORS -->
+  <section class="card errors-card">
+    <header class="errors-header">
+      <h3 class="title">Errors</h3>
+
+      <div class="meta">
+        <span class="meta-item">
+          Total <strong>{{ total() | number:'1.0-0':'en-US' }}</strong>
+        </span>
+        <span class="badge"
+              *ngIf="cacheFlag() as cf"
+              [class.badge-hit]="cf === 'hit'"
+              [class.badge-miss]="cf === 'miss'">
+          CACHE: {{ cf | uppercase }}
+        </span>
+      </div>
+      
+      <div class="controls">
+        <div class="seg seg-pill">
+          <button type="button"
+                  class="seg__btn"
+                  [class.active]="viewMode()==='paged'"
+                  (click)="toggleViewMode('paged')">
+            Paged
+          </button>
+          <button type="button"
+                  class="seg__btn"
+                  [class.active]="viewMode()==='infinite'"
+                  (click)="toggleViewMode('infinite')">
+            Load more (Infinite)
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Table body (scrollable) -->
+    <div class="body">
+      <!-- paged -->
+      <app-errors-table
+        *ngIf="viewMode()==='paged'"
+        [items]="events()"
+        [loading]="loading()"
+        [emptyMessage]="'No data'">
+      </app-errors-table>
+
+      <!-- infinite -->
+      <app-errors-table
+        *ngIf="viewMode()==='infinite'"
+        [items]="ptItems()"
+        [loading]="ptLoading()"
+        [emptyMessage]="'No data'">
+      </app-errors-table>
     </div>
 
-    <!-- <button type="submit" class="btn primary" [disabled]="loading() || form.invalid">Search</button> -->
-    <button type="button" class="btn" (click)="reset()">Reset</button>
-  </div>
-</form>
+    <!-- footer -->
+    <footer class="footer">
+      <app-paged-footer
+        *ngIf="viewMode()==='paged'"
+        [page]="currentPage()"
+        [size]="pageSize()"
+        [maxPage]="maxPage()"
+        [windowCapped]="windowCapped()"
+        (prev)="prevPage()"
+        (next)="nextPage()"
+        (sizeChange)="form.patchValue({ size: $event, page: 1 })"
+        (goto)="form.patchValue({ page: $event })">
+      </app-paged-footer>
 
-<!-- validation messages -->
-<div class="form-errors" *ngIf="form.errors as fe">
-  <span *ngIf="fe['startInFuture']">Start date cannot be in the future.</span>
-  <span *ngIf="fe['endInFuture']">End date cannot be in the future.</span>
-  <span *ngIf="fe['startAfterEnd']">Start date must be before End date.</span>
+      <app-infinite-footer
+        *ngIf="viewMode()==='infinite'"
+        [size]="pageSize()"
+        [hasItems]="!!ptItems().length"
+        [loading]="ptLoading()"
+        [done]="ptDone()"
+        (loadFirst)="loadFirstPt()"
+        (loadMore)="loadMorePt()"
+        (sizeChange)="form.patchValue({ size: $event })">
+      </app-infinite-footer>
+    </footer>
+  </section>
+
+  <!-- RESULTS & STATS -->
+  <section class="card stats-card">
+    <header class="stats-header">
+      <h3>Results &amp; Stats</h3>
+
+      <div class="controls">
+        <div class="seg">
+          <button class="seg__btn" [class.active]="statsSource()==='es'"
+                  (click)="statsSource.set('es')">ES</button>
+          <button class="seg__btn" [class.active]="statsSource()==='redis'"
+                  (click)="statsSource.set('redis')">Redis (Live)</button>
+        </div>
+
+        <div class="seg" *ngIf="statsSource()==='redis'">
+          <button class="seg__btn" [class.active]="redisScope()==='1h'"
+                  (click)="redisScope.set('1h')">Last 1h</button>
+          <button class="seg__btn" [class.active]="redisScope()==='global'"
+                  (click)="redisScope.set('global')">Global</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="charts" *ngIf="statsView() as s; else noStatsTpl">
+      <div class="chart">
+        <h4>Top Browsers</h4>
+        <div class="chart-box">
+          <canvas baseChart [type]="'pie'"
+                  [data]="browsersChartData()"
+                  [options]="pieOptions"></canvas>
+        </div>
+      </div>
+
+      <div class="chart">
+        <h4>Top Error Messages</h4>
+        <div class="chart-box">
+          <canvas baseChart [type]="'bar'"
+                  [data]="errorMessagesChartData()"
+                  [options]="barOptions"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <ng-template #noStatsTpl>
+      <div class="no-stats">No stats</div>
+    </ng-template>
+  </section>
+
 </div>
-
-<!-- ERRORS -->
-<section class="card errors-card">
-  <header class="card-title">
-    <span>Errors</span>
-
-    <div class="seg seg--inline mode-toggle">
-      <button
-        type="button"
-        class="seg__btn"
-        [class.active]="viewMode()==='paged'"
-        (click)="toggleViewMode('paged')"
-        aria-pressed="{{ viewMode()==='paged' }}"
-      >
-        Paged
-      </button>
-      <button
-        type="button"
-        class="seg__btn"
-        [class.active]="viewMode()==='infinite'"
-        (click)="toggleViewMode('infinite')"
-        aria-pressed="{{ viewMode()==='infinite' }}"
-      >
-        Load more (Infinite)
-      </button>
-    </div>
-
-
-    <div class="meta">
-      <span class="meta-item">Total <strong>{{ total() | number:'1.0-0' : 'sr-RS' }}</strong></span>
-      <span class="badge"
-            *ngIf="cacheFlag() as cf"
-            [class.badge-hit]="cf === 'hit'"
-            [class.badge-miss]="cf === 'miss'">
-        CACHE: {{ cf | uppercase }}
-      </span>
-    </div>
-  </header>
-
-  <!-- Paged tabela -->
-  <div class="card-body scroll-area" *ngIf="viewMode()==='paged'">
-    <table class="tbl" *ngIf="events().length">
-      <thead>
-        <tr>
-          <th>timestamp</th><th>userId</th><th>browser</th><th>url</th><th>errorMessage</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let e of events()">
-          <td>{{ e.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</td>
-          <td>{{ e.userId }}</td>
-          <td>{{ e.browser }}</td>
-          <td>{{ e.url }}</td>
-          <td class="msg">{{ e.errorMessage }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div *ngIf="loading()" class="loading-row">Loading…</div>
-    <div *ngIf="!loading() && !events().length" class="empty-row">No data</div>
-  </div>
-
-  <!-- Infinite tabela -->
-  <div class="card-body scroll-area" *ngIf="viewMode()==='infinite'">
-    <table class="tbl" *ngIf="ptItems().length">
-      <thead>
-        <tr>
-          <th>timestamp</th><th>userId</th><th>browser</th><th>url</th><th>errorMessage</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngFor="let e of ptItems()">
-          <td>{{ e.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</td>
-          <td>{{ e.userId }}</td>
-          <td>{{ e.browser }}</td>
-          <td>{{ e.url }}</td>
-          <td class="msg">{{ e.errorMessage }}</td>
-        </tr>
-      </tbody>
-    </table>
-    <div *ngIf="ptLoading()" class="loading-row">Loading…</div>
-    <div *ngIf="!ptLoading() && !ptItems().length" class="empty-row">No data</div>
-  </div>
-
-  <!-- Paged footer -->
-  <footer class="card-footer pager" *ngIf="viewMode()==='paged'">
-    <div class="pager-left">
-      <button type="button" (click)="prevPage()" [disabled]="currentPage() <= 1">Prev</button>
-      <span class="sep"></span>
-      <span>Page {{ currentPage() }} / {{ maxPage() }}</span>
-    </div>
-
-    <div class="goto">
-      <label>Go to page
-        <input type="number" min="1"
-               [value]="gotoPageInput() ?? ''"
-               max="{{ maxPage() }}"
-               (input)="updateGotoPageInput($event.target.value)">
-      </label>
-      <button type="button" (click)="goToPage()">Go</button>
-      <small *ngIf="maxPageByWindow() < maxPage()">Window cap: up to {{ maxPageByWindow() }} (10k window)</small>
-    </div>
-
-    <div class="pager-right">
-      <label>Size
-        <select [formControl]="form.controls.size">
-          <option [value]="10">10</option>
-          <option [value]="25">25</option>
-          <option [value]="50">50</option>
-          <option [value]="100">100</option>
-        </select>
-      </label>
-      <button type="button"
-              (click)="nextPage()"
-              [disabled]="currentPage() >= maxPage() || windowCapped()">Next</button>
-    </div>
-  </footer>
-
-  <!-- Infinite footer -->
-  <footer class="card-footer pager" *ngIf="viewMode()==='infinite'">
-    <div class="pager-left">
-      <button type="button" (click)="loadFirstPt()" *ngIf="!ptItems().length && !ptLoading()">Load first</button>
-      <button type="button" (click)="loadMorePt()" [disabled]="ptLoading() || ptDone()" *ngIf="ptItems().length">Load more</button>
-      <span *ngIf="ptDone()">No more results</span>
-    </div>
-    <div class="pager-right">
-      <label>Batch size
-        <select [formControl]="form.controls.size">
-          <option [value]="25">25</option>
-          <option [value]="50">50</option>
-          <option [value]="100">100</option>
-        </select>
-      </label>
-    </div>
-  </footer>
-</section>
-
-
-
-<!-- RESULTS & STATS (ES or Redis) -->
-<section class="card">
-  <header class="card__header">
-    <h3 class="card__title">Results &amp; Stats</h3>
-  
-    <div class="stats-controls">
-      <div class="seg">
-        <button type="button" class="seg__btn" [class.active]="statsSource()==='es'" (click)="statsSource.set('es')">
-          ES
-        </button>
-        <button type="button" class="seg__btn" [class.active]="statsSource()==='redis'" (click)="statsSource.set('redis')">
-          Redis (Live)
-        </button>
-      </div>
-  
-      <div class="seg" *ngIf="statsSource()==='redis'">
-        <button type="button" class="seg__btn" [class.active]="redisScope()==='1h'" (click)="redisScope.set('1h')">
-          Last 1h
-        </button>
-        <button type="button" class="seg__btn" [class.active]="redisScope()==='global'" (click)="redisScope.set('global')">
-          Global
-        </button>
-      </div>
-  
-      <!-- 🟦 info-badge umesto checkboxa -->
-      <span class="pill pill--info" *ngIf="statsSource()==='redis'">Auto-refresh 10s</span>
-    </div>
-  </header>
-
-  <div class="charts" *ngIf="statsView() as s; else noStatsTpl">
-    <div class="chart">
-      <h4>Top Browsers</h4>
-      <div class="chart-box">
-        <canvas baseChart [type]="'pie'" [data]="browsersChartData()" [options]="pieOptions"></canvas>
-      </div>
-    </div>
-
-    <div class="chart">
-      <h4>Top Error Messages</h4>
-      <div class="chart-box">
-        <canvas baseChart [type]="'bar'" [data]="errorMessagesChartData()" [options]="barOptions"></canvas>
-      </div>
-    </div>
-  </div>
-
-  <ng-template #noStatsTpl>
-    <div class="table-wrap">
-      <div class="chip">No stats</div>
-    </div>
-  </ng-template>
-</section>

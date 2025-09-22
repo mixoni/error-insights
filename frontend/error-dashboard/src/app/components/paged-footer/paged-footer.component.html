@@ -1,0 +1,29 @@
+<footer class="card-footer pager">
+  <div class="pager-left">
+    <button type="button" (click)="prev.emit()" [disabled]="page <= 1">Prev</button>
+    <span class="sep"></span>
+    <span>Page {{ page }} / {{ maxPage }}</span>
+  </div>
+
+  <div class="goto">
+    <label>Go to page
+      <input #gp type="number" min="1" [value]="gotoInput" (input)="gotoInput = gp.value">
+    </label>
+    <button type="button" (click)="emitGoto()">Go</button>
+    @if (windowCapped) {
+      <small>Window cap active (10k window)</small>
+    }
+  </div>
+
+  <div class="pager-right">
+    <label>Size
+      <select #sel [value]="size" (change)="emitSize(sel.value)">
+        <option [value]="10">10</option>
+        <option [value]="25">25</option>
+        <option [value]="50">50</option>
+        <option [value]="100">100</option>
+      </select>
+    </label>
+    <button type="button" (click)="next.emit()" [disabled]="page >= maxPage || windowCapped">Next</button>
+  </div>
+</footer>

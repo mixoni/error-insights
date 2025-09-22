@@ -1,0 +1,33 @@
+<div class="table-wrap">
+    @if (items.length) {
+      <table class="tbl">
+        <thead>
+          <tr>
+            <th>timestamp</th>
+            <th>userId</th>
+            <th>browser</th>
+            <th>url</th>
+            <th>errorMessage</th>
+          </tr>
+        </thead>
+        <tbody>
+            @for (e of items; track trackByRow($index, e)) {
+                <tr>
+                    <td>{{ e.timestamp | date:'yyyy-MM-dd HH:mm:ss' }}</td>
+                    <td>{{ e.userId }}</td>
+                    <td>{{ e.browser }}</td>
+                    <td>{{ e.url }}</td>
+                    <td class="msg">{{ e.errorMessage }}</td>
+                </tr>
+            }              
+        </tbody>
+      </table>
+    }
+    @if (loading) {
+      <div class="loading-row">Loading…</div>
+    }
+    @if (!loading && !items.length) {
+      <div class="empty-row">{{ emptyMessage }}</div>
+    }
+  </div>
+  

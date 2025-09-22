@@ -1,0 +1,8 @@
+.toolbar { display: grid; gap: 10px; margin-bottom: 12px; }
+.inputs { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; }
+.inputs input { padding: 6px 8px; border: 1px solid #d5dbe3; border-radius: 6px; }
+.actions { display: flex; align-items: center; gap: 12px; }
+.presets .btn.sm { padding: 4px 8px; font-size: 12px; }
+.btn { padding: 6px 10px; border-radius: 8px; border: 1px solid #d5dbe3; background: #fff; cursor: pointer; }
+.btn:hover { background: #f1f5f9; }
+.form-errors { color: #b91c1c; font-size: 12px; display: flex; gap: 12px; }

@@ -1,0 +1,5 @@
+.table-wrap { width: 100%; }
+.tbl { width: 100%; border-collapse: collapse; }
+.tbl th, .tbl td { border: 1px solid #e5e7eb; padding: 6px 8px; text-align: left; }
+.msg { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 520px; }
+.loading-row, .empty-row { padding: 12px; color: #475569; }

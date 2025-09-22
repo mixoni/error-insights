@@ -1,0 +1,22 @@
+<footer class="card-footer pager">
+    <div class="pager-left">
+      @if (!hasItems && !loading) {
+        <button type="button" (click)="loadFirst.emit()">Load first</button>
+      }
+      @if (hasItems) {
+        <button type="button" (click)="loadMore.emit()" [disabled]="loading || done">Load more</button>
+        @if (done) { <span>No more results</span> }
+      }
+    </div>
+  
+    <div class="pager-right">
+      <label>Batch size
+        <select #sel [value]="size" (change)="emitSize(sel.value)">
+          <option [value]="25">25</option>
+          <option [value]="50">50</option>
+          <option [value]="100">100</option>
+        </select>
+      </label>
+    </div>
+  </footer>
+  

@@ -1,0 +1,29 @@
+<form class="toolbar" [formGroup]="form">
+    <div class="inputs">
+      <input type="datetime-local" placeholder="Start" formControlName="start" [attr.max]="maxDateTime" />
+      <input type="datetime-local" placeholder="End"   formControlName="end"   [attr.max]="maxDateTime" />
+  
+      <input placeholder="userId"  formControlName="userId" />
+      <input placeholder="browser" formControlName="browser" />
+      <input placeholder="url"     formControlName="url" />
+      <input placeholder="keyword (error/stack)" formControlName="q" />
+    </div>
+  
+    <div class="actions">
+      <div class="presets">
+        <button type="button" class="btn sm" (click)="preset.emit('1h')">Last 1h</button>
+        <button type="button" class="btn sm" (click)="preset.emit('24h')">24h</button>
+        <button type="button" class="btn sm" (click)="preset.emit('7d')">7d</button>
+      </div>
+      <button type="button" class="btn" (click)="reset.emit()">Reset</button>
+    </div>
+  
+    @if (form.errors; as fe) {
+      <div class="form-errors">
+        @if (fe['startInFuture']) { <span>Start date cannot be in the future.</span> }
+        @if (fe['endInFuture'])   { <span>End date cannot be in the future.</span> }
+        @if (fe['startAfterEnd']) { <span>Start date must be before End date.</span> }
+      </div>
+    }
+  </form>
+  

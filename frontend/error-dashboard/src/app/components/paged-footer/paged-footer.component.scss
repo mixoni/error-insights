@@ -1,0 +1,10 @@
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.pager-left, .pager-right { display: flex; align-items: center; gap: 12px; }
+.sep { width: 1px; height: 18px; background: #e5e7eb; display: inline-block; }
+.goto { display: flex; align-items: center; gap: 8px; }
+.goto input { width: 90px; padding: 4px 8px; border: 1px solid #d5dbe3; border-radius: 6px; }
+.pager button, .pager select {
+  padding: 6px 10px; border-radius: 8px; border: 1px solid #d5dbe3; background: #fff; cursor: pointer; transition: background .2s;
+}
+.pager button:hover:not(:disabled), .pager select:hover { background: #f1f5f9; }
+.pager button:disabled { opacity: .5; cursor: not-allowed; }
