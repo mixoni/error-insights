@@ -148,9 +148,7 @@ npm run test
 ---
 
 ## ⚠️ Limitations (MVP)
-
-- Mongo is used only as a **raw event store** (no direct API endpoints).  
-- PIT search holds connection ~2m (default keep_alive).  
+  
 - Classic paging max window: **10k** (Elasticsearch limitation).  
 - UI not polished (intentionally minimal for MVP).  
 
