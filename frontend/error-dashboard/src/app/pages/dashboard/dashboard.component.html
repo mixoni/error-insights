@@ -15,7 +15,7 @@
 
       <div class="meta">
         <span class="meta-item">
-          Total <strong>{{ total() | number:'1.0-0':'en-US' }}</strong>
+          Total <strong>{{ total() | number:'1.0-0' }}</strong>
         </span>
         <span class="badge"
               *ngIf="cacheFlag() as cf"
@@ -37,7 +37,7 @@
                   class="seg__btn"
                   [class.active]="viewMode()==='infinite'"
                   (click)="toggleViewMode('infinite')">
-            Load more (Infinite)
+            Load more (*Idea)
           </button>
         </div>
       </div>
@@ -48,8 +48,8 @@
       <!-- paged -->
       <app-errors-table
         *ngIf="viewMode()==='paged'"
-        [items]="events()"
-        [loading]="loading()"
+        [items]="tableItems()"
+        [loading]="loadingPaged()"
         [emptyMessage]="'No data'">
       </app-errors-table>
 
@@ -57,7 +57,7 @@
       <app-errors-table
         *ngIf="viewMode()==='infinite'"
         [items]="ptItems()"
-        [loading]="ptLoading()"
+        [loading]="loadingPt()"
         [emptyMessage]="'No data'">
       </app-errors-table>
     </div>
@@ -80,9 +80,8 @@
         *ngIf="viewMode()==='infinite'"
         [size]="pageSize()"
         [hasItems]="!!ptItems().length"
-        [loading]="ptLoading()"
+        [loading]="loadingPt()"
         [done]="ptDone()"
-        (loadFirst)="loadFirstPt()"
         (loadMore)="loadMorePt()"
         (sizeChange)="form.patchValue({ size: $event })">
       </app-infinite-footer>

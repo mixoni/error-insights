@@ -8,19 +8,23 @@ import { toHttpParams } from '../utils/utils.service';
 export class ApiService {
     constructor(private http: HttpClient) {}
 
-    getSearch(params: any): Observable<SearchResponse> {
-        let p = new HttpParams();
-        Object.entries(params).forEach(([k, v]) => { 
-            if (v !== undefined && v !== null && v !== '') p = p.set(k, String(v)); 
+    private buildParams(obj: Record<string, any>) {
+        const params: any = {};
+        Object.entries(obj).forEach(([k, v]) => {
+          if (v === null || v === undefined) return;
+          if (typeof v === 'string' && v.trim() === '') return;
+          params[k] = v;
         });
+        return params;
+      }
+
+    getSearch(params: any): Observable<SearchResponse> {
+        const p = this.buildParams(params);
         return this.http.get<SearchResponse>('/api/events/search', { params: p });
     }
 
     getStats(params: any): Observable<StatsResponse> {
-        let p = new HttpParams();
-        Object.entries(params).forEach(([k, v]) => { 
-            if (v !== undefined && v !== null && v !== '') p = p.set(k, String(v)); 
-        });
+        const p = this.buildParams(params);
         return this.http.get<StatsResponse>('/api/events/stats', { params: p });
     }
     getWidgetsTop(scope: 'global' | '1h' = '1h', size = 5) {
@@ -34,6 +38,7 @@ export class ApiService {
     }
 
     getSearchPt(params: any) {
-        return this.http.get<any>('/api/events/search-pt', { params });
+        const p = this.buildParams(params);
+        return this.http.get<any>('/api/events/search-pt', { params:p });
       }
 }

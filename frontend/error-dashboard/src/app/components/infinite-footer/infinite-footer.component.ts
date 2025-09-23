@@ -15,7 +15,6 @@ export class InfiniteFooterComponent {
   @Input() done = false;
   @Input({ required: true }) size = 50;
 
-  @Output() loadFirst = new EventEmitter<void>();
   @Output() loadMore = new EventEmitter<void>();
   @Output() sizeChange = new EventEmitter<number>();
 

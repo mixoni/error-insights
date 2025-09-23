@@ -1,8 +1,5 @@
 <footer class="card-footer pager">
     <div class="pager-left">
-      @if (!hasItems && !loading) {
-        <button type="button" (click)="loadFirst.emit()">Load first</button>
-      }
       @if (hasItems) {
         <button type="button" (click)="loadMore.emit()" [disabled]="loading || done">Load more</button>
         @if (done) { <span>No more results</span> }
