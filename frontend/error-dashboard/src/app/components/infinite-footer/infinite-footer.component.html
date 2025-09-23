@@ -1,19 +1,28 @@
-<footer class="card-footer pager">
-    <div class="pager-left">
-      @if (hasItems) {
-        <button type="button" (click)="loadMore.emit()" [disabled]="loading || done">Load more</button>
-        @if (done) { <span>No more results</span> }
-      }
-    </div>
-  
-    <div class="pager-right">
-      <label>Batch size
-        <select #sel [value]="size" (change)="emitSize(sel.value)">
-          <option [value]="25">25</option>
-          <option [value]="50">50</option>
-          <option [value]="100">100</option>
-        </select>
-      </label>
-    </div>
-  </footer>
-  
+<footer class="card-footer pager pager--infinite">
+  <div class="pager-left">
+    <span class="hint" *ngIf="!hasItems && !loading">Ready</span>
+    <span class="hint" *ngIf="done">No more results</span>
+  </div>
+
+  <div class="pager-right">
+    <label class="size">
+      Size
+      <select [value]="size" (change)="sizeChange.emit(+$any($event.target).value)">
+        <option [value]="25">25</option>
+        <option [value]="50">50</option>
+        <option [value]="100">100</option>
+      </select>
+    </label>
+
+    <button
+      type="button"
+      class="btn primary"
+      [disabled]="loading || done"
+      (click)="loadMore.emit()"
+      [attr.aria-busy]="loading"
+      [title]="done ? 'No more results' : (loading ? 'Loading…' : (hasItems ? 'Load more' : 'Load first'))">
+      <span class="loader" *ngIf="loading" aria-hidden="true"></span>
+      {{ done ? 'Done' : (loading ? 'Loading…' : (hasItems ? 'Load more' : 'Load first')) }}
+    </button>
+  </div>
+</footer>
