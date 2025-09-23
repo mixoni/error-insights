@@ -130,7 +130,7 @@ Generates **5k random events** and sends them to the backend.
 
 ---
 
-## ✅ Testing
+## ✅ Testing (Vitetest + Supertest)
 
 ### Unit Tests
 We included a **minimal test suite** to validate core functionality:
