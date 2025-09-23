@@ -24,46 +24,37 @@
           CACHE: {{ cf | uppercase }}
         </span>
       </div>
-      
+
       <div class="controls">
         <div class="seg seg-pill">
           <button type="button"
                   class="seg__btn"
                   [class.active]="viewMode()==='paged'"
                   (click)="toggleViewMode('paged')">
-            Paged (< 10k)
+            Paged (&lt; 10k)
           </button>
           <button type="button"
                   class="seg__btn"
                   [class.active]="viewMode()==='infinite'"
                   (click)="toggleViewMode('infinite')">
-            Load more (> 10k)
+            Load more (&gt; 10k)
           </button>
         </div>
       </div>
     </header>
 
-    <!-- Table body (scrollable) -->
+    <!-- Jedna tabela za oba moda (puni se tableItems()) -->
     <div class="body">
-      <!-- paged -->
       <app-errors-table
-        *ngIf="viewMode()==='paged'"
         [items]="tableItems()"
-        [loading]="loadingPaged()"
-        [emptyMessage]="'No data'">
-      </app-errors-table>
-
-      <!-- infinite -->
-      <app-errors-table
-        *ngIf="viewMode()==='infinite'"
-        [items]="ptItems()"
-        [loading]="loadingPt()"
+        [loading]="viewMode()==='paged' ? state.loadingPaged() : state.loadingPt()"
         [emptyMessage]="'No data'">
       </app-errors-table>
     </div>
 
-    <!-- footer -->
+    <!-- Footer -->
     <footer class="footer">
+      <!-- Paged footer -->
       <app-paged-footer
         *ngIf="viewMode()==='paged'"
         [page]="currentPage()"
@@ -76,12 +67,13 @@
         (goto)="form.patchValue({ page: $event })">
       </app-paged-footer>
 
+      <!-- Infinite footer -->
       <app-infinite-footer
         *ngIf="viewMode()==='infinite'"
         [size]="pageSize()"
-        [hasItems]="!!ptItems().length"
-        [loading]="loadingPt()"
-        [done]="ptDone()"
+        [hasItems]="!!tableItems().length"
+        [loading]="state.loadingPt()"
+        [done]="state.ptDone()"
         (loadMore)="loadMorePt()"
         (sizeChange)="form.patchValue({ size: $event })">
       </app-infinite-footer>
@@ -110,7 +102,7 @@
       </div>
     </header>
 
-    <div class="charts" *ngIf="statsView() as s; else noStatsTpl">
+    <div class="charts" *ngIf="showStatsSection() as s; else noStatsTpl">
       <div class="chart">
         <h4>Top Browsers</h4>
         <div class="chart-box">
