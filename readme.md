@@ -51,7 +51,7 @@ This will start:
 - Elasticsearch on port 9200  
 - Redis on port 6379  
 
-### 3. Environment (.env)
+### 3. Environment (.env on backend)
 Create a `.env` file at the project root:
 
 ```env
