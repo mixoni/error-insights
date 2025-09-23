@@ -392,5 +392,14 @@ export class DashboardComponent {
 
   browsersChartData = signal<{ labels: string[]; datasets: any[] }>({ labels: [], datasets: [] });
   errorMessagesChartData = signal<{ labels: string[]; datasets: any[] }>({ labels: [], datasets: [] });
+
+  hasBrowserData = computed(() => {
+    const d = this.browsersChartData();
+    return (d.datasets?.[0]?.data?.length ?? 0) > 0;
+  });
+  hasErrorData = computed(() => {
+    const d = this.errorMessagesChartData();
+    return (d.datasets?.[0]?.data?.length ?? 0) > 0;
+  });
   //#endregion
 }

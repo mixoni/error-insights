@@ -31,13 +31,13 @@
                   class="seg__btn"
                   [class.active]="viewMode()==='paged'"
                   (click)="toggleViewMode('paged')">
-            Paged
+            Paged (< 10k)
           </button>
           <button type="button"
                   class="seg__btn"
                   [class.active]="viewMode()==='infinite'"
                   (click)="toggleViewMode('infinite')">
-            Load more (*Idea)
+            Load more (> 10k)
           </button>
         </div>
       </div>
@@ -114,18 +114,24 @@
       <div class="chart">
         <h4>Top Browsers</h4>
         <div class="chart-box">
-          <canvas baseChart [type]="'pie'"
-                  [data]="browsersChartData()"
-                  [options]="pieOptions"></canvas>
+          <ng-container *ngIf="hasBrowserData(); else noBrowserTpl">
+            <canvas baseChart [type]="'pie'" [data]="browsersChartData()" [options]="pieOptions"></canvas>
+          </ng-container>
+          <ng-template #noBrowserTpl>
+            <div class="no-data">No data</div>
+          </ng-template>
         </div>
       </div>
 
       <div class="chart">
         <h4>Top Error Messages</h4>
         <div class="chart-box">
-          <canvas baseChart [type]="'bar'"
-                  [data]="errorMessagesChartData()"
-                  [options]="barOptions"></canvas>
+          <ng-container *ngIf="hasErrorData(); else noErrorsTpl">
+            <canvas baseChart [type]="'bar'" [data]="errorMessagesChartData()" [options]="barOptions"></canvas>
+          </ng-container>
+          <ng-template #noErrorsTpl>
+            <div class="no-data">No data</div>
+          </ng-template>
         </div>
       </div>
     </div>
