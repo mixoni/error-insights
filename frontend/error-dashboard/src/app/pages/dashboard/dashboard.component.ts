@@ -44,7 +44,6 @@ export class DashboardComponent {
   private fb = inject(FormBuilder);
   readonly state = inject(DashboardStateService);
 
-  // ---- Form & validation (UI forma je i dalje ovde, logika fetch-a je u state servisu)
   form = this.fb.group(
     {
       start: [''],
@@ -58,16 +57,12 @@ export class DashboardComponent {
       sort: ['desc' as 'asc' | 'desc', { nonNullable: true }],
     },
     {
-      // koristimo pure util validator; prosleđujemo "trenutni max"
       validators: (group: any) => dateRangeValidatorFn(this.maxDateTime())(group),
     }
   );
 
-  // view mod (UI toggles)
-  viewMode = this.state.viewMode; // delegiramo direktno state-u
+  viewMode = this.state.viewMode; 
 
-  // Projections iz state.bind(form)
-  // (ovo vraća signale koje koristimo u HTML-u umesto starih events()/total()…)
   filtersSig!: Signal<any>;
   pageSize!: Signal<number>;
   tableItems!: Signal<any[]>;
@@ -75,7 +70,6 @@ export class DashboardComponent {
   cacheFlag!: Signal<'hit' | 'miss' | null>;
   windowCapped!: Signal<boolean>
 
-  // spajamo formu sa state-om
   constructor() {
     const bound = this.state.bind(this.form);
     this.filtersSig   = bound.filters;
@@ -86,7 +80,6 @@ export class DashboardComponent {
     this.windowCapped = bound.windowCapped;
   }
 
-  // ---- Helpers za šablon (ostaje isto ponašanje kao ranije)
   maxDateTime() {
     const d = new Date();
     d.setSeconds(0, 0);
@@ -141,12 +134,9 @@ export class DashboardComponent {
 
   // --- Infinite (Load first / Load more)
   loadFirstPt() {
-    // State servis već automatski vuče prvi batch na promenu filtera ili pri ulasku u infinite.
-    // Ako baš želiš ručno: “prodrmamo” formu da se okine effect bez promene UX-a.
     this.form.patchValue({ size: this.form.value.size }); // no-op patch koji trigeruje valueChanges
   }
   loadMorePt() {
-    // prosledi raw formu; servis radi normalize i dodaje cursor
     this.state.loadMore(this.form.getRawValue());
   }
 
@@ -159,10 +149,10 @@ export class DashboardComponent {
 
   showStatsSection = computed(() => this.hasBrowserData() || this.hasErrorData());
 
-  // ---- Stats toggles (proxy na state)
-  statsSource = this.state.statsSource; // 'es' | 'redis'
-  redisScope  = this.state.redisScope;  // '1h' | 'global'
-  autoRefresh = this.state.autoRefresh; // true (locked 10s)
+  // ---- Stats toggles
+  statsSource = this.state.statsSource; 
+  redisScope  = this.state.redisScope; 
+  autoRefresh = this.state.autoRefresh; 
 
 
   pieOptions: any = {

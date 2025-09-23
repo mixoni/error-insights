@@ -85,10 +85,10 @@ curl -X POST http://localhost:3000/api/ingest \
   --data-binary @seed/events.sample.json
 
 Bulk seeding
-npm run bulk-seed-10k
+npm run bulk-seed-5k
 
 
-Generates 10k random events and sends them to the backend.
+Generates 5k random events and sends them to the backend.
 
 📑 Features
 🔍 Search (ES + Redis cache)

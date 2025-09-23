@@ -57,16 +57,16 @@
       font-weight: 700;
       letter-spacing: .2px;
     }
-    .badge-hit  { background: #e6f7ea; color: #177245; }   /* zelena */
-    .badge-miss { background: #fde7e7; color: #b3261e; }   /* crvena */
+    .badge-hit  { background: #e6f7ea; color: #177245; }   
+    .badge-miss { background: #fde7e7; color: #b3261e; }  
   }
 }
 
 .body {
-  overflow: auto;            /* tabela skroluje */
+  overflow: auto;           
   border: 1px solid #f0f0f0;
   border-radius: 8px;
-  padding: 0;                /* child tabela već ima padding u sebi */
+  padding: 0;              
 }
 
 .footer {
@@ -105,7 +105,7 @@
   text-align: center; color: #888; padding: 24px 0;
 }
 
-/* Small tweaks for inner tables (child component friendly) */
+
 :host ::ng-deep .tbl {
   width: 100%;
   border-collapse: collapse;
@@ -131,7 +131,7 @@
   gap: 10px;
 }
 .card-title .spacer {
-  flex: 1 1 auto; /* gura dugmiće udesno */
+  flex: 1 1 auto; 
 }
 .card-title .controls {
   display: flex;

@@ -26,7 +26,6 @@ export function toHttpParams(obj: Record<string, any>) {
   export function adaptStats(raw: any) {
     if (!raw) return { topBrowsers: [], topErrorMessages: [] };
   
-    // Neke varijante: raw.topBrowsers | raw.top_browser | raw.browsers
     const bsrc = raw.topBrowsers ?? raw.browsers ?? [];
     const msrc = raw.topErrorMessages ?? raw.topMessages ?? raw.messages ?? [];
   

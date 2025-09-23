@@ -1,6 +1,5 @@
 import { z } from 'zod';
 
-// helper: '' -> undefined
 const emptyToUndef = (v: unknown) => (v === '' ? undefined : v);
 
 export const filtersSchema = z.object({

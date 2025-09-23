@@ -11,7 +11,6 @@ export class ElasticEventReader implements EventReader {
     const must: any[] = [];
     const filter: any[] = [];
 
-    // date range samo ako je prosleđen (nema podrazumevanog)
     if (filters.start || filters.end) {
       filter.push({
         range: {
@@ -32,7 +31,6 @@ export class ElasticEventReader implements EventReader {
     if (filters.browser) must.push(wildCardWrapper('browser', filters.browser)!);
     if (filters.url)     must.push(wildCardWrapper('url',     filters.url)!);
 
-    // full-text (errorMessage, stackTrace)
     if (filters.keyword) {
       must.push({
         multi_match: {

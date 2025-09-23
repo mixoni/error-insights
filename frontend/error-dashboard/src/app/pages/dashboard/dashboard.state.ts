@@ -15,7 +15,6 @@ type RedisScope  = '1h'|'global';
 
 @Injectable({ providedIn: 'root' })
 export class DashboardStateService {
-  // ---- UI mode
   viewMode = signal<ViewMode>('paged');
 
   // ---- paged state
@@ -34,16 +33,16 @@ export class DashboardStateService {
   redisScope  = signal<RedisScope>('global');
   autoRefresh = signal(true); // fixed 10s za Redis
 
-  // ---- raw stats (po izvoru)
+  // ---- raw stats data
   private esStatsRaw    = signal<any>(null);
   private redisStatsRaw = signal<any>(null);
 
-  // ---- unified stats view (komponenta može *ngIf na ovo)
+  // ---- unified stats view 
   statsView = computed(() =>
     this.statsSource() === 'es' ? this.esStatsRaw() : this.redisStatsRaw()
   );
 
-  // ---- chart data (UI-friendly)
+  // ---- chart data 
   browsersChartData = signal<{ labels: string[]; datasets: any[] }>({ labels: [], datasets: [] });
   errorMessagesChartData = signal<{ labels: string[]; datasets: any[] }>({ labels: [], datasets: [] });
 
@@ -54,7 +53,6 @@ export class DashboardStateService {
   constructor(private api: ApiService) {}
 
   bind(form: FormGroup) {
-    // form -> filters signal
     const form$ = form.valueChanges.pipe(
       startWith(form.getRawValue()),
       map(v => ({ ...v })), debounceTime(250),
@@ -62,7 +60,6 @@ export class DashboardStateService {
     );
     const filters = toSignal(form$, { initialValue: form.getRawValue() });
 
-    // unified table projections
     const pageSize = computed(() => Number(filters().size ?? 50));
     const tableItems = computed(() =>
       this.viewMode()==='paged' ? (this.pagedResult()?.items ?? []) : this.ptItems()
@@ -73,7 +70,6 @@ export class DashboardStateService {
     const cacheFlag    = computed(() => this.viewMode()==='paged' ? (this.pagedResult()?.cache ?? null) : null);
     const windowCapped = computed(() => !!this.pagedResult()?.windowCapped);
 
-    // ---- CENTRAL DRIVER: bira endpoint po modu i filterima
     effect((onCleanup) => {
       const mode = this.viewMode();
       const f    = filters();
@@ -89,10 +85,9 @@ export class DashboardStateService {
           complete: () => this.loadingPaged.set(false),
         });
       } else {
-        // infinite first page
         this.ptItems.set([]); this.ptCursor.set(null); this.ptDone.set(false);
         this.loadingPt.set(true);
-        // NOTE: kad je cursor null, normalizeFilters neće ga ubaciti u query
+
         this.fetchSub = this.api.getSearchPt(norm).subscribe({
           next: (res:any) => {
             this.ptItems.set(res.items ?? []);
@@ -108,7 +103,7 @@ export class DashboardStateService {
       onCleanup(()=> this.fetchSub?.unsubscribe());
     });
 
-    // ---- ES stats: aktivno samo kad je izvor 'es'
+
     this.esSub?.unsubscribe();
     this.esSub = combineLatest([
       toObservable(this.statsSource),
@@ -122,7 +117,7 @@ export class DashboardStateService {
       this.esStatsRaw.set(raw);
     });
 
-    // ---- Redis stats: aktivno samo kad je izvor 'redis' (auto 10s)
+    // ---- Redis stats (auto 10s)
     this.redisSub?.unsubscribe();
     this.redisSub = combineLatest([
       toObservable(this.statsSource),
@@ -138,7 +133,6 @@ export class DashboardStateService {
       this.redisStatsRaw.set(raw);
     });
 
-    // ---- Jedan efekat puni chart data na osnovu unified statsView
     effect(() => {
       const raw = this.statsView();
       if (!raw) {
@@ -157,7 +151,6 @@ export class DashboardStateService {
       });
     });
 
-    // expose sve što komponenta koristi
     return {
       filters,
       pageSize,
@@ -166,13 +159,11 @@ export class DashboardStateService {
       cacheFlag,
       windowCapped,
 
-      // za UI kontrole i prikaz
       statsSource: this.statsSource,
       redisScope : this.redisScope,
       autoRefresh: this.autoRefresh,
       statsView  : this.statsView,
 
-      // chart data direktno iz state-a (ako ih koristiš u komponenti)
       browsersChartData: this.browsersChartData,
       errorMessagesChartData: this.errorMessagesChartData,
     };

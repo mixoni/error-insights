@@ -12,7 +12,7 @@ import { ReactiveFormsModule, FormGroup } from '@angular/forms';
 })
 export class FiltersBarComponent {
   @Input({ required: true }) form!: FormGroup;
-  @Input() maxDateTime = ''; // ISO string for [max] attributes
+  @Input() maxDateTime = ''; 
   @Output() preset = new EventEmitter<'1h'|'24h'|'7d'>();
   @Output() reset = new EventEmitter<void>();
 }

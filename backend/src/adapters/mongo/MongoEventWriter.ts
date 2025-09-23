@@ -13,6 +13,5 @@ export class MongoEventWriter implements EventWriter {
     await this.collection.insertMany(events);
   }
   async indexStructured(): Promise<void> {
-    // no-op here; real indexing will be handled in ES adapter or usecase
   }
 }

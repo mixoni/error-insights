@@ -1,5 +1,5 @@
 export type ErrorEvent = {
-    timestamp: string; // ISO format
+    timestamp: string; 
     userId: string;
     browser?: string;
     url?: string;

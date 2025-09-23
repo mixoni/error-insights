@@ -16,13 +16,11 @@ export function makeIngestEvents(writer: EventWriter, esIndexer: ElasticEventRea
           const browser = (e.browser || 'unknown').toLowerCase();
           const msgKey  = (e.errorMessage || 'unknown').toLowerCase();
   
-          // global top
           pipe.zincrby('errors:top:browsers', 1, browser);
           pipe.zincrby('errors:top:messages', 1, msgKey);
   
-          // rolling 1h bucket (pocev od pune ure), TTL 2h
           const bucket = new Date();
-          bucket.setMinutes(0, 0, 0); // 1h buckets
+          bucket.setMinutes(0, 0, 0); 
           const bISO = bucket.toISOString();
           const keyBrowsers1h = `errors:top:browsers:1h:${bISO}`;
           const keyMessages1h = `errors:top:messages:1h:${bISO}`;
